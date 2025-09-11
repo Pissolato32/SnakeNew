@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slither.io Clone</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="loginScreen">
+        <div class="login-box">
+            <h1>Slither.io</h1>
+            <input type="text" id="nicknameInput" placeholder="Enter your nickname">
+            <button id="playButton">Play</button>
+        </div>
+    </div>
+
+    <canvas id="backgroundCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="gameUI">
+        <div id="leaderboard">
+            <h2>Leaderboard</h2>
+            <ol id="leaderboardList">
+                <!-- Dummy Data -->
+                <li><span>Player 1</span><span>1500</span></li>
+                <li><span>Bot_Killer</span><span>1245</span></li>
+                <li><span>Food_Lover</span><span>980</span></li>
+            </ol>
+        </div>
+        <div id="score">
+            <span>Length:</span>
+            <span id="scoreValue">0</span>
+        </div>
+    </div>
+
+    <div id="deathScreen">
+        <div class="death-box">
+            <h1>You Died!</h1>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button id="playAgainButton">Play Again</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="CircularBufferClient.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
