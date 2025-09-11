@@ -5,6 +5,11 @@ class AIManager {
     constructor(playerManager, foodManager) {
         this.playerManager = playerManager;
         this.foodManager = foodManager;
+        this._isThreatNearby = this._isThreatNearby.bind(this);
+        this._isPreyNearby = this._isPreyNearby.bind(this);
+        this._flee = this._flee.bind(this);
+        this._attack = this._attack.bind(this);
+        this._farm = this._farm.bind(this);
         this.behaviorTree = this._createBehaviorTree();
     }
 
