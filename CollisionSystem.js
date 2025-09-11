@@ -1,4 +1,4 @@
-const { worldSize, SPAWN_BUFFER } = require('./Constants');
+const Constants = require('./Constants');
 
 class CollisionSystem {
     constructor(playerManager, foodManager, powerupManager) {
@@ -59,7 +59,7 @@ class CollisionSystem {
             const player = players[id];
 
             // World boundary collision
-            if (Math.hypot(player.x, player.y) > worldSize / 2 - player.radius) {
+            if (Math.hypot(player.x, player.y) > Constants.worldSize / 2 - player.radius) {
                 playersToKill.add(player);
                 continue;
             }
@@ -75,12 +75,34 @@ class CollisionSystem {
             });
 
             // Food collisions
-            const foodQueryRange = { x: player.x - player.radius, y: player.y - player.radius, width: player.radius * 2, height: player.radius * 2 };
+            const foodQueryRange = { x: player.x - Constants.AI_VISION_RANGE_WIDTH / 2, y: player.y - Constants.AI_VISION_RANGE_WIDTH / 2, width: Constants.AI_VISION_RANGE_WIDTH, height: Constants.AI_VISION_RANGE_WIDTH };
             const nearbyFood = this.foodManager.foodSpatialHashing.query(foodQueryRange);
 
+            if (!player.isBot) {
+                console.log(`Player ${player.id} - Pos: (${player.x.toFixed(2)}, ${player.y.toFixed(2)}), Radius: ${player.radius.toFixed(2)}`);
+                console.log(`Nearby food count: ${nearbyFood.length}`);
+            }
+
             nearbyFood.forEach(f => {
-                if (foodToRemove.has(f)) return;
-                if (Math.hypot(player.x - f.x, player.y - f.y) < player.radius + f.radius) {
+                const distance = Math.hypot(player.x - f.x, player.y - f.y);
+                const radiiSum = player.radius + f.radius;
+                const collisionDetected = distance < radiiSum;
+
+                if (!player.isBot) {
+                    console.log(`  Food ${f.id} - Pos: (${f.x.toFixed(2)}, ${f.y.toFixed(2)}), Radius: ${f.radius.toFixed(2)}`);
+                    console.log(`  Distance: ${distance.toFixed(2)}, Radii Sum: ${radiiSum.toFixed(2)}, Collision: ${collisionDetected}`);
+                }
+
+                if (foodToRemove.has(f)) {
+                    if (!player.isBot) {
+                        console.log(`  Food ${f.id} already marked for removal.`);
+                    }
+                    return;
+                }
+                if (collisionDetected) {
+                    if (!player.isBot) {
+                        console.log(`  COLLISION! Player ${player.id} with Food ${f.id}`);
+                    }
                     player.maxLength += f.score;
                     player.radius = Math.min(100, player.radius + f.score * 0.02);
                     const blendFactor = Math.min(1, 0.03 * f.score);
@@ -89,6 +111,9 @@ class CollisionSystem {
                     player.rgb.b = Math.round(player.rgb.b * (1 - blendFactor) + f.rgb.b * blendFactor);
                     player.color = `rgb(${player.rgb.r}, ${player.rgb.g}, ${player.rgb.b})`;
                     foodToRemove.add(f);
+                    if (!player.isBot) {
+                        console.log(`  Food ${f.id} added to foodToRemove. New player length: ${player.maxLength}, radius: ${player.radius.toFixed(2)}`);
+                    }
                 }
             });
 
@@ -134,7 +159,7 @@ class CollisionSystem {
             foodToRemove.forEach(f => this.foodManager.removeFood(f));
             // Replenish food supply
             for (let i = 0; i < foodToRemove.size; i++) {
-                this.foodManager.addFood(this.foodManager.createFood(undefined, undefined, undefined, players, SPAWN_BUFFER));
+                this.foodManager.addFood(this.foodManager.createFood(undefined, undefined, undefined, players, Constants.SPAWN_BUFFER));
             }
         }
 

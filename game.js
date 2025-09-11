@@ -378,7 +378,19 @@ class Game {
 
         this.drawWorld(); // Draw the world border after transformations
 
-        this.food.forEach(f => this.drawFood(f));
+        this.food.forEach(f => {
+            this.drawFood(f);
+            if (this.selfId && this.players[this.selfId]) {
+                const self = this.players[this.selfId];
+                const distance = Math.hypot(self.x - f.x, self.y - f.y);
+                const radiiSum = self.radius + f.radius;
+                const collisionDetected = distance < radiiSum;
+                console.log(`CLIENT - Player Pos: (${self.x.toFixed(2)}, ${self.y.toFixed(2)}), Radius: ${self.radius.toFixed(2)}`);
+                console.log(`CLIENT - Food Pos: (${f.x.toFixed(2)}, ${f.y.toFixed(2)}), Radius: ${f.radius.toFixed(2)}`);
+                console.log(`CLIENT - Distance: ${distance.toFixed(2)}, Radii Sum: ${radiiSum.toFixed(2)}, Collision: ${collisionDetected}`);
+                console.log(`CLIENT - Camera: (${this.camera.x.toFixed(2)}, ${this.camera.y.toFixed(2)}), Zoom: ${this.camera.zoom.toFixed(2)}`);
+            }
+        });
         this.powerups.forEach(p => this.drawPowerUp(p));
         for (const id in this.players) {
             this.drawSnake(this.players[id]);
@@ -418,8 +430,24 @@ class Game {
         this.ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
         this.ctx.fillStyle = f.color;
         this.ctx.fill();
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        this.ctx.lineWidth = 1;
+        // Add visual indicator for client-side collision proximity
+        if (this.selfId && this.players[this.selfId]) {
+            const self = this.players[this.selfId];
+            const distance = Math.hypot(self.x - f.x, self.y - f.y);
+            const radiiSum = self.radius + f.radius;
+            const collisionDetected = distance < radiiSum;
+
+            if (collisionDetected) {
+                this.ctx.strokeStyle = 'red'; // Highlight in red
+                this.ctx.lineWidth = 3; // Make border thicker
+            } else {
+                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)'; // Original color
+                this.ctx.lineWidth = 1; // Original thickness
+            }
+        } else {
+            this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)'; // Original color if self player not found
+            this.ctx.lineWidth = 1; // Original thickness
+        }
         this.ctx.stroke();
     }
 
@@ -435,23 +463,28 @@ class Game {
     }
 
     drawSnake(p) {
+        if (p.body.length === 0) {
+            return; // Não faz nada se a cobra não tiver corpo
+        }
         this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
         this.ctx.lineWidth = 2;
 
         // Draw the body segments (from tail to neck)
         const segmentDrawInterval = Math.max(1, Math.floor(p.body.length / 100)); // Draw fewer segments for longer snakes
         for (let i = 1; i < p.body.length; i += segmentDrawInterval) {
-            const segment = p.body[i];
-            const radius = p.radius * (1 - (i / p.body.length) * 0.5);
-            this.ctx.beginPath();
-            this.ctx.arc(segment.x, segment.y, radius, 0, Math.PI * 2);
-            this.ctx.fillStyle = p.color;
-            this.ctx.fill();
-            this.ctx.stroke();
+            const segment = p.body.get(i);
+            if (segment) { // Add this check
+                const radius = p.radius * (1 - (i / p.body.length) * 0.5);
+                this.ctx.beginPath();
+                this.ctx.arc(segment.x, segment.y, radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = p.color;
+                this.ctx.fill();
+                this.ctx.stroke();
+            }
         }
 
         // Now, draw the head on top of the body (p.body[0])
-        const head = p.body[0];
+        const head = p.body.get(0);
         this.ctx.beginPath();
         this.ctx.arc(head.x, head.y, p.radius, 0, Math.PI * 2);
         this.ctx.fillStyle = p.color;
@@ -499,6 +532,8 @@ class Game {
         this.updateScoreAndLeaderboard();
 
         const self = this.players[this.selfId];
+        if (!self) return;
+
         if (self && self.powerups.foodMagnet && self.powerups.foodMagnet.active) {
             this.ctx.save();
             this.ctx.font = 'bold 20px Arial';

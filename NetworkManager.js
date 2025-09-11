@@ -97,15 +97,21 @@ class NetworkManager {
                 const playerDelta = {};
                 let changed = false;
                 // Only check critical, frequently changing properties
-                const propsToCheck = ['x', 'y', 'angle', 'maxLength', 'radius', 'isBoosting', 'ping']; // Added ping
+                const propsToCheck = ['x', 'y', 'angle', 'maxLength', 'radius', 'isBoosting', 'ping'];
                 for (const key of propsToCheck) {
-                    // Round numeric values to reduce small floating point changes
-                    const currentValue = typeof currentPlayer[key] === 'number' ? Math.round(currentPlayer[key] * 100) / 100 : currentPlayer[key];
-                    const lastValue = typeof lastPlayer[key] === 'number' ? Math.round(lastPlayer[key] * 100) / 100 : lastPlayer[key];
+                    let currentValue = currentPlayer[key];
+                    let lastValue = lastPlayer[key];
+
+                    // Apply rounding only for x, y, angle to reduce bandwidth for frequent updates
+                    if (key === 'x' || key === 'y' || key === 'angle') {
+                        currentValue = typeof currentValue === 'number' ? Math.round(currentValue * 100) / 100 : currentValue;
+                        lastValue = typeof lastValue === 'number' ? Math.round(lastValue * 100) / 100 : lastValue;
+                    }
+                    // For maxLength, radius, isBoosting, ping, send exact values
 
                     if (currentValue !== lastValue) {
-                        playerDelta[key] = currentValue;
-                        lastPlayer[key] = currentValue; // Update last state
+                        playerDelta[key] = currentPlayer[key]; // Send original value
+                        lastPlayer[key] = currentPlayer[key]; // Store original value for next comparison
                         changed = true;
                     }
                 }
@@ -130,8 +136,24 @@ class NetworkManager {
                 if (!lastItemsMap.has(id)) {
                     delta[type].added.push(item);
                     lastItemsMap.set(id, { ...item });
+                } else {
+                    // Check for updates (e.g., position for food magnet)
+                    const lastItem = lastItemsMap.get(id);
+                    let changed = false;
+                    const itemDelta = { id: item.id }; // Include ID for updated items
+
+                    // Compare relevant properties for food/powerups (e.g., x, y for food magnet)
+                    if (item.x !== lastItem.x) { itemDelta.x = item.x; changed = true; }
+                    if (item.y !== lastItem.y) { itemDelta.y = item.y; changed = true; }
+                    // Add other properties if they can change (e.g., radius, color if dynamic)
+                    // For now, assuming only x, y can change for food/powerups due to magnet
+
+                    if (changed) {
+                        delta[type].updated.push(itemDelta);
+                        // Update lastState with current values
+                        lastItemsMap.set(id, { ...item });
+                    }
                 }
-                // No updates for food/powerups for now to save bandwidth, only add/remove
             }
 
             for (const id of lastItemsMap.keys()) {
