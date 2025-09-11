@@ -18,66 +18,6 @@ const POWERUP_TYPES = [
 
 const gridCellSize = 200;
 
-const worldSize = 30000;
-const foodAmount = 500;
-const BOT_COUNT = 30;
-const BOT_NAMES = ['Slinky', 'Noodle', 'Worminator', 'Sir Hiss', 'Pretzel', 'Zippy', 'Slitherin', 'Boop', 'Mr. Wiggles', 'Snek'];
-const SPAWN_BUFFER = 800;
-const BOT_BOUNDARY_BUFFER = 500;
-
-const FOOD_TYPES = [
-    { radius: 4, score: 1, color: '#FF6347' },
-    { radius: 6, score: 2, color: '#FFD700' },
-    { radius: 8, score: 3, color: '#ADFF2F' },
-    { radius: 10, score: 4, color: '#8A2BE2' }
-];
-
-const POWERUP_TYPES = [
-    { type: 'FOOD_MAGNET', color: '#FFFFFF', radius: 12 }
-];
-
-const gridCellSize = 200;
-
-// Game Loop and Physics Constants
-const GAME_TICK_RATE_MS = 1000 / 60; // 60 FPS
-const POWERUP_SPAWN_INTERVAL_MS = 15000;
-const MIN_POWERUPS = 5;
-const FOOD_MAGNET_RADIUS = 200;
-const FOOD_MAGNET_FORCE = 0.1;
-const BASE_SPEED_MIN = 3;
-const BASE_SPEED_MAX_INITIAL = 4;
-const LENGTH_DIVISOR_SPEED = 1000;
-const TURN_RATE_MIN = 0.05;
-const TURN_RATE_MAX_INITIAL = 0.1;
-const LENGTH_DIVISOR_TURN_RATE = 1000;
-const BOOST_SPEED_MULTIPLIER = 1.8;
-const BOOST_LENGTH_CONSUMPTION_RATE = 0.05;
-const BOOST_FOOD_DROP_PROBABILITY = 0.1;
-const BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP = 5;
-const BOT_MANAGEMENT_INTERVAL_MS = 5000;
-const MIN_BOT_COUNT = 5;
-const BOT_COUNT_HUMAN_MULTIPLIER = 2;
-
-const worldSize = 30000;
-const foodAmount = 500;
-const BOT_COUNT = 30;
-const BOT_NAMES = ['Slinky', 'Noodle', 'Worminator', 'Sir Hiss', 'Pretzel', 'Zippy', 'Slitherin', 'Boop', 'Mr. Wiggles', 'Snek'];
-const SPAWN_BUFFER = 800;
-const BOT_BOUNDARY_BUFFER = 500;
-
-const FOOD_TYPES = [
-    { radius: 4, score: 1, color: '#FF6347' },
-    { radius: 6, score: 2, color: '#FFD700' },
-    { radius: 8, score: 3, color: '#ADFF2F' },
-    { radius: 10, score: 4, color: '#8A2BE2' }
-];
-
-const POWERUP_TYPES = [
-    { type: 'FOOD_MAGNET', color: '#FFFFFF', radius: 12 }
-];
-
-const gridCellSize = 200;
-
 // Game Loop and Physics Constants
 const GAME_TICK_RATE_MS = 1000 / 60; // 60 FPS
 const POWERUP_SPAWN_INTERVAL_MS = 15000;
