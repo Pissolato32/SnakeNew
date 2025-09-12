@@ -170,10 +170,6 @@ class CollisionSystem {
         // Apply removals and kills after all collisions are processed
         if (foodToRemove.size > 0) {
             foodToRemove.forEach(f => this.foodManager.removeFood(f));
-            // Replenish food supply
-            for (let i = 0; i < foodToRemove.size; i++) {
-                this.foodManager.addFood(this.foodManager.createFood(undefined, undefined, undefined, players, Constants.SPAWN_BUFFER));
-            }
         }
 
         playersToKill.forEach(player => this.playerManager.killPlayer(player));

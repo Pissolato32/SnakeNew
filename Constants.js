@@ -1,7 +1,5 @@
 const DEBUG_MODE = true;
 const worldSize = 30000;
-const foodAmount = 500;
-const BOT_COUNT = 30;
 const BOT_NAMES = ['Slinky', 'Noodle', 'Worminator', 'Sir Hiss', 'Pretzel', 'Zippy', 'Slitherin', 'Boop', 'Mr. Wiggles', 'Snek'];
 const SPAWN_BUFFER = 800;
 const BOT_BOUNDARY_BUFFER = 500;
@@ -24,6 +22,7 @@ const GAME_TICK_RATE_MS = 1000 / 60; // 60 FPS
 const NETWORK_UPDATE_RATE_MS = 1000 / 30; // 30 FPS for network updates
 const POWERUP_SPAWN_INTERVAL_MS = 15000;
 const MIN_POWERUPS = 5;
+const FOOD_PER_PLAYER = 25; // Dynamic food setting
 const FOOD_MAGNET_RADIUS = 200;
 const FOOD_MAGNET_FORCE = 0.1;
 const BASE_SPEED_MIN = 3;
@@ -39,6 +38,8 @@ const BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP = 5;
 const BOT_MANAGEMENT_INTERVAL_MS = 5000;
 const MIN_BOT_COUNT = 5;
 const BOT_COUNT_HUMAN_MULTIPLIER = 2;
+const BOT_SCORE_DIFFERENCE_FACTOR = 1.5;
+const BOT_SCORE_DIFFERENCE_BONUS = 3;
 const SNAKE_SEGMENT_RADIUS = 6; // New constant for snake body segment radius
 
 // AI Constants
@@ -57,8 +58,6 @@ const AI_STEERING_MAGNITUDE_THRESHOLD = 0.01;
 
 module.exports = {
     worldSize,
-    foodAmount,
-    BOT_COUNT,
     BOT_NAMES,
     SPAWN_BUFFER,
     BOT_BOUNDARY_BUFFER,
@@ -71,6 +70,7 @@ module.exports = {
     NETWORK_UPDATE_RATE_MS, // Export the new constant
     POWERUP_SPAWN_INTERVAL_MS,
     MIN_POWERUPS,
+    FOOD_PER_PLAYER,
     FOOD_MAGNET_RADIUS,
     FOOD_MAGNET_FORCE,
     BASE_SPEED_MIN,
@@ -86,6 +86,8 @@ module.exports = {
     BOT_MANAGEMENT_INTERVAL_MS,
     MIN_BOT_COUNT,
     BOT_COUNT_HUMAN_MULTIPLIER,
+    BOT_SCORE_DIFFERENCE_FACTOR,
+    BOT_SCORE_DIFFERENCE_BONUS,
     SNAKE_SEGMENT_RADIUS,
 
     // Export AI constants

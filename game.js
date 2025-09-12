@@ -188,8 +188,8 @@ class Game {
                     // Reconstruct body based on new head position and maxLength
                     // This is a simplified reconstruction. The server is the source of truth.
                     // The client will just add the new head and trim the tail.
-                    if (updatedProps.x !== undefined || updatedProps.y !== undefined) {
-                        // Add the new head position
+                    if (id !== this.selfId && (updatedProps.x !== undefined || updatedProps.y !== undefined)) {
+                        // Add the new head position for other players
                         player.body.addFirst({ x: updatedProps.x !== undefined ? updatedProps.x : player.x,
                                               y: updatedProps.y !== undefined ? updatedProps.y : player.y });
                     }
@@ -307,10 +307,6 @@ class Game {
         const self = this.players[this.selfId];
         if (!self) return;
 
-        if (this.showDebugPanel) {
-            console.log(`CLIENT - Player ${self.id} Pos: (${self.x.toFixed(2)}, ${self.y.toFixed(2)})`);
-        }
-
         if (this.isDead) { // If player is dead, stop sending input
             this.socket.emit('player-update', { angle: self.angle, isBoosting: false }); // Send no input, no boosting
             // Still update camera for smooth view of the death scene
@@ -321,27 +317,48 @@ class Game {
             return; // Stop further updates for the dead player
         }
 
-        // --- Client-Side Prediction ---
-        // Calculate angle and send input to server
+        // --- Client-Side Prediction for self ---
         const worldMouseX = (this.mouse.x - this.gameCanvas.width / 2) / this.camera.zoom + self.x;
         const worldMouseY = (this.mouse.y - this.gameCanvas.height / 2) / this.camera.zoom + self.y;
         const targetAngle = Math.atan2(worldMouseY - self.y, worldMouseX - self.x);
         this.socket.emit('player-update', { angle: targetAngle, isBoosting: this.isBoosting });
 
-        // Predict own movement
+        // Predict own movement using the same logic as the server
         const angleDiff = targetAngle - self.angle;
         self.angle += Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff)) * self.turnRate;
-        const baseSpeed = Math.max(3, 4 - (self.maxLength / 1000));
-        self.baseSpeed = baseSpeed;
-        const speed = self.isBoosting ? baseSpeed * 1.5 : baseSpeed; // This speed is for client-side prediction only
-        self.currentSpeed = speed; // Store the calculated speed
 
-        // Interpolate all players to their target positions from the server
+        // These values should come from a shared constants file (e.g., Constants.client.js)
+        const BASE_SPEED_MIN = 3;
+        const BASE_SPEED_MAX_INITIAL = 4;
+        const LENGTH_DIVISOR_SPEED = 1000;
+        const TURN_RATE_MIN = 0.05;
+        const TURN_RATE_MAX_INITIAL = 0.1;
+        const LENGTH_DIVISOR_TURN_RATE = 1000;
+        const BOOST_SPEED_MULTIPLIER = 1.8;
+
+        self.turnRate = Math.max(TURN_RATE_MIN, TURN_RATE_MAX_INITIAL - (self.maxLength / LENGTH_DIVISOR_TURN_RATE) * TURN_RATE_MIN);
+        const baseSpeed = Math.max(BASE_SPEED_MIN, BASE_SPEED_MAX_INITIAL - (self.maxLength / LENGTH_DIVISOR_SPEED));
+        self.speed = self.isBoosting ? baseSpeed * BOOST_SPEED_MULTIPLIER : baseSpeed;
+
+        // Apply the predicted movement directly to the client's own snake
+        self.x += Math.cos(self.angle) * self.speed;
+        self.y += Math.sin(self.angle) * self.speed;
+        
+        // Add the new predicted position to the body to keep it dense
+        self.body.addFirst({ x: self.x, y: self.y });
+        while (self.body.length > self.maxLength) {
+            self.body.removeLast();
+        }
+
+        // --- Interpolation for ALL players (including self for server correction) ---
         for(const id in this.players) {
             const p = this.players[id];
-            if(p.targetX) {
-                p.x += (p.targetX - p.x) * 0.15; // Smoother interpolation
-                p.y += (p.targetY - p.y) * 0.15; // Smoother interpolation
+            if (p.targetX) {
+                // If it's our own player, we use a smaller interpolation factor
+                // to gently correct our prediction. For others, we interpolate more strongly.
+                const factor = (id === this.selfId) ? 0.05 : 0.15;
+                p.x += (p.targetX - p.x) * factor;
+                p.y += (p.targetY - p.y) * factor;
             }
         }
 

@@ -12,17 +12,8 @@ class GameLoop {
     }
 
     initGame() {
-        for (let i = 0; i < Constants.foodAmount; i++) {
-            this.foodManager.addFood(this.foodManager.createFood(undefined, undefined, undefined, this.playerManager.getPlayers(), Constants.SPAWN_BUFFER));
-        }
-        this.powerupManager.addPowerup(this.powerupManager.createPowerup());
+        // Initial food and powerups are now handled by the dynamic management loop
         this.playerManager.initBots(); // Initialize bots
-
-        setInterval(() => {
-            if (this.powerupManager.getPowerups().length < Constants.MIN_POWERUPS) {
-                this.powerupManager.addPowerup(this.powerupManager.createPowerup());
-            }
-        }, Constants.POWERUP_SPAWN_INTERVAL_MS);
     }
 
     start() {
@@ -46,28 +37,6 @@ class GameLoop {
                     }
                 }
 
-                // --- Power-up Effects ---
-                // if (player.powerups.foodMagnet?.active) {
-                //     if (Date.now() > player.powerups.foodMagnet.endTime) {
-                //         player.powerups.foodMagnet.active = false;
-                //     } else {
-                //         const magnetRadius = FOOD_MAGNET_RADIUS;
-                //         const magnetForce = FOOD_MAGNET_FORCE;
-                //         const foodQueryRange = { x: player.x - magnetRadius, y: player.y - magnetRadius, width: magnetRadius * 2, height: magnetRadius * 2 };
-                //         const nearbyFood = this.foodManager.foodSpatialHashing.query(foodQueryRange);
-                //         nearbyFood.forEach(f => {
-                //             const dx = player.x - f.x;
-                //             const dy = f.y - f.y; // This line seems to have a bug, should be dy = player.y - f.y
-                //             if ((dx * dx) + (dy * dy) < magnetRadius * magnetRadius) { // Optimized Math.hypot
-                //                 f.x += (player.x - f.x) * magnetForce;
-                //                 f.y += (player.y - f.y) * magnetForce;
-                //                 // Update spatial hashing for the moved food item
-                //                 this.foodManager.foodSpatialHashing.update(f);
-                //             }
-                //         });
-                //     }
-                // }
-
                 // --- Physics and Movement ---
                 const angleDiff = player.targetAngle - player.angle;
                 player.angle += Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff)) * player.turnRate;
@@ -82,7 +51,6 @@ class GameLoop {
                         const tail = player.body.get(player.body.length - 1);
                         this.foodManager.addFood(this.foodManager.createFood(tail.x, tail.y, 0));
                     }
-                    // If boosting causes length to drop below threshold, stop boosting
                     if (player.maxLength <= Constants.BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP) {
                         player.isBoosting = false;
                     }
@@ -93,7 +61,6 @@ class GameLoop {
                 player.x += Math.cos(player.angle) * player.speed;
                 player.y += Math.sin(player.angle) * player.speed;
 
-                // Add current position to head history for lag compensation
                 player.headHistory.addFirst({ x: player.x, y: player.y, timestamp: Date.now() });
 
                 player.body.addFirst({ x: player.x, y: player.y });
@@ -105,32 +72,59 @@ class GameLoop {
             }
 
             this.collisionSystem.processCollisions();
-            console.timeEnd("GameLoopTick"); // End timing
+            console.timeEnd("GameLoopTick");
 
         }, Constants.GAME_TICK_RATE_MS);
 
         // Network update loop
         setInterval(() => {
-            console.time("NetworkUpdateLoop"); // Start timing
             this.networkManager.sendGameUpdates();
-            console.timeEnd("NetworkUpdateLoop"); // End timing
         }, Constants.NETWORK_UPDATE_RATE_MS);
 
-        // Note: Dynamic bot management logic could be moved to its own manager in the future.
+        // Dynamic game management loop (bots, food, etc.)
         setInterval(() => {
-            const humanPlayerCount = this.playerManager.getHumanPlayerCount();
-            const currentBotCount = Object.values(this.playerManager.getPlayers()).filter(p => p.isBot).length;
-            const targetBotCount = Math.max(Constants.MIN_BOT_COUNT, humanPlayerCount * Constants.BOT_COUNT_HUMAN_MULTIPLIER); // Simplified logic
+            const allPlayers = Object.values(this.playerManager.getPlayers());
+            const humanPlayers = allPlayers.filter(p => !p.isBot);
+            const bots = allPlayers.filter(p => p.isBot);
 
-            if (currentBotCount < targetBotCount) {
-                this.playerManager.addBot();
+            // --- Dynamic Bot Management ---
+            let scoreBonusBots = 0;
+            if (humanPlayers.length > 0 && bots.length > 0) {
+                const totalBotScore = bots.reduce((sum, bot) => sum + bot.maxLength, 0);
+                const averageBotScore = totalBotScore / bots.length;
+                const maxHumanScore = Math.max(...humanPlayers.map(p => p.maxLength));
+
+                if (maxHumanScore > averageBotScore * Constants.BOT_SCORE_DIFFERENCE_FACTOR) {
+                    scoreBonusBots = Constants.BOT_SCORE_DIFFERENCE_BONUS;
+                }
             }
-            else if (currentBotCount > targetBotCount) {
-                const botToRemove = Object.values(this.playerManager.getPlayers()).find(p => p.isBot);
+
+            const targetBotCount = Math.max(Constants.MIN_BOT_COUNT, (humanPlayers.length * Constants.BOT_COUNT_HUMAN_MULTIPLIER) + scoreBonusBots);
+
+            if (bots.length < targetBotCount) {
+                this.playerManager.addBot();
+            } else if (bots.length > targetBotCount) {
+                const botToRemove = bots[0]; // Simple strategy: remove the first bot in the list
                 if (botToRemove) {
                     this.playerManager.removePlayer(botToRemove);
                 }
             }
+
+            // --- Dynamic Food Management ---
+            const targetFoodCount = allPlayers.length * Constants.FOOD_PER_PLAYER;
+            const currentFoodCount = this.foodManager.getFood().length;
+            if (currentFoodCount < targetFoodCount) {
+                const foodToAdd = targetFoodCount - currentFoodCount;
+                for (let i = 0; i < foodToAdd; i++) {
+                    this.foodManager.addFood(this.foodManager.createFood(undefined, undefined, undefined, allPlayers, Constants.SPAWN_BUFFER));
+                }
+            }
+
+            // --- Dynamic Powerup Management ---
+            if (this.powerupManager.getPowerups().length < Constants.MIN_POWERUPS) {
+                this.powerupManager.addPowerup(this.powerupManager.createPowerup());
+            }
+
         }, Constants.BOT_MANAGEMENT_INTERVAL_MS);
     }
 }
