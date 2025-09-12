@@ -340,8 +340,8 @@ class Game {
         for(const id in this.players) {
             const p = this.players[id];
             if(p.targetX) {
-                p.x += (p.targetX - p.x) * 0.3;
-                p.y += (p.targetY - p.y) * 0.3;
+                p.x += (p.targetX - p.x) * 0.15; // Smoother interpolation
+                p.y += (p.targetY - p.y) * 0.15; // Smoother interpolation
             }
         }
 
@@ -468,31 +468,37 @@ class Game {
 
     drawSnake(p) {
         if (p.body.length === 0) {
-            return; // Não faz nada se a cobra não tiver corpo
+            return; // Don't draw if no body
         }
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        this.ctx.lineWidth = 2;
 
-        // Draw the body segments (from tail to neck)
-        const segmentDrawInterval = Math.max(1, Math.floor(p.body.length / 100)); // Draw fewer segments for longer snakes
-        for (let i = 1; i < p.body.length; i += segmentDrawInterval) {
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+
+        // Draw the main body as a single, thick, tapering line
+        for (let i = 0; i < p.body.length - 1; i++) {
             const segment = p.body.get(i);
-            if (segment) { // Add this check
+            const nextSegment = p.body.get(i + 1);
+
+            if (segment && nextSegment) {
                 const radius = p.radius * (1 - (i / p.body.length) * 0.5);
+                this.ctx.strokeStyle = p.color;
+                this.ctx.lineWidth = Math.max(2, radius * 2); // Ensure a minimum line width
+
                 this.ctx.beginPath();
-                this.ctx.arc(segment.x, segment.y, radius, 0, Math.PI * 2);
-                this.ctx.fillStyle = p.color;
-                this.ctx.fill();
+                this.ctx.moveTo(segment.x, segment.y);
+                this.ctx.lineTo(nextSegment.x, nextSegment.y);
                 this.ctx.stroke();
             }
         }
 
-        // Now, draw the head on top of the body (p.body[0])
+        // Draw the head on top
         const head = p.body.get(0);
         this.ctx.beginPath();
         this.ctx.arc(head.x, head.y, p.radius, 0, Math.PI * 2);
         this.ctx.fillStyle = p.color;
         this.ctx.fill();
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+        this.ctx.lineWidth = 2;
         this.ctx.stroke();
 
         // Draw the eyes and nickname on the head

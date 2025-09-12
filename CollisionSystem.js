@@ -146,30 +146,17 @@ class CollisionSystem {
                     return; // Collision detected, no need to check body
                 }
 
-                // Reconstruct historical body segments for otherPlayer
-                // This is an approximation: we assume segments maintain their relative offset from the head
-                // even when rewinding. This is common in games for performance.
+                // Head-to-body collision check (using current body position, not historical)
                 for (let i = 1; i < otherPlayer.body.length; i++) {
-                    const currentSegment = otherPlayer.body.get(i);
-                    const currentHead = otherPlayer.body.get(0); // Get current head position
+                    const segment = otherPlayer.body.get(i);
 
-                    // Calculate offset of segment from current head
-                    const offsetX = currentSegment.x - currentHead.x;
-                    const offsetY = currentSegment.y - currentHead.y;
-
-                    // Apply offset to historical head to get historical segment position
-                    const historicalSegment = {
-                        x: historicalHeadOtherPlayer.x + offsetX,
-                        y: historicalHeadOtherPlayer.y + offsetY
-                    };
-
-                    // Check collision of current player's head with historical segment
-                    const distanceHeadToSegment = Math.hypot(player.x - historicalSegment.x, player.y - historicalSegment.y);
+                    // Check collision of current player's head with the other player's current body segment
+                    const distanceHeadToSegment = Math.hypot(player.x - segment.x, player.y - segment.y);
                     if (Constants.DEBUG_MODE) {
-                        console.log(`    Head-to-Body: Player ${player.id} Head (${player.x.toFixed(2)}, ${player.y.toFixed(2)}) vs OtherPlayer ${otherPlayer.id} Segment ${i} Historical (${historicalSegment.x.toFixed(2)}, ${historicalSegment.y.toFixed(2)})`);
+                        console.log(`    Head-to-Body: Player ${player.id} Head (${player.x.toFixed(2)}, ${player.y.toFixed(2)}) vs OtherPlayer ${otherPlayer.id} Segment ${i} (${segment.x.toFixed(2)}, ${segment.y.toFixed(2)})`);
                         console.log(`    Distance Head-to-Segment: ${distanceHeadToSegment.toFixed(2)}, Radii Sum: ${(player.radius + Constants.SNAKE_SEGMENT_RADIUS).toFixed(2)}`);
                     }
-                    if (distanceHeadToSegment < player.radius + Constants.SNAKE_SEGMENT_RADIUS) { // More accurate radius check
+                    if (distanceHeadToSegment < player.radius + Constants.SNAKE_SEGMENT_RADIUS) {
                         if (Constants.DEBUG_MODE) {
                             console.log(`    COLLISION! Head-to-Body: Player ${player.id} with OtherPlayer ${otherPlayer.id} body segment ${i}`);
                         }
