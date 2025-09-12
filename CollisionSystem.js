@@ -78,7 +78,7 @@ class CollisionSystem {
             const foodQueryRange = { x: player.x - Constants.AI_VISION_RANGE_WIDTH / 2, y: player.y - Constants.AI_VISION_RANGE_WIDTH / 2, width: Constants.AI_VISION_RANGE_WIDTH, height: Constants.AI_VISION_RANGE_WIDTH };
             const nearbyFood = this.foodManager.foodSpatialHashing.query(foodQueryRange);
 
-            if (!player.isBot) {
+            if (Constants.DEBUG_MODE && !player.isBot) {
                 console.log(`Player ${player.id} - Pos: (${player.x.toFixed(2)}, ${player.y.toFixed(2)}), Radius: ${player.radius.toFixed(2)}`);
                 console.log(`Nearby food count: ${nearbyFood.length}`);
             }
@@ -88,19 +88,19 @@ class CollisionSystem {
                 const radiiSum = player.radius + f.radius;
                 const collisionDetected = distance < radiiSum;
 
-                if (!player.isBot) {
+                if (Constants.DEBUG_MODE && !player.isBot) {
                     console.log(`  Food ${f.id} - Pos: (${f.x.toFixed(2)}, ${f.y.toFixed(2)}), Radius: ${f.radius.toFixed(2)}`);
                     console.log(`  Distance: ${distance.toFixed(2)}, Radii Sum: ${radiiSum.toFixed(2)}, Collision: ${collisionDetected}`);
                 }
 
                 if (foodToRemove.has(f)) {
-                    if (!player.isBot) {
+                    if (Constants.DEBUG_MODE && !player.isBot) {
                         console.log(`  Food ${f.id} already marked for removal.`);
                     }
                     return;
                 }
                 if (collisionDetected) {
-                    if (!player.isBot) {
+                    if (Constants.DEBUG_MODE && !player.isBot) {
                         console.log(`  COLLISION! Player ${player.id} with Food ${f.id}`);
                     }
                     player.maxLength += f.score;
@@ -111,7 +111,7 @@ class CollisionSystem {
                     player.rgb.b = Math.round(player.rgb.b * (1 - blendFactor) + f.rgb.b * blendFactor);
                     player.color = `rgb(${player.rgb.r}, ${player.rgb.g}, ${player.rgb.b})`;
                     foodToRemove.add(f);
-                    if (!player.isBot) {
+                    if (Constants.DEBUG_MODE && !player.isBot) {
                         console.log(`  Food ${f.id} added to foodToRemove. New player length: ${player.maxLength}, radius: ${player.radius.toFixed(2)}`);
                     }
                 }
@@ -124,9 +124,27 @@ class CollisionSystem {
             nearbyPlayers.forEach(otherPlayer => {
                 if (player.id === otherPlayer.id) return;
 
+                if (Constants.DEBUG_MODE) {
+                    console.log(`  Checking collision between Player ${player.id} and OtherPlayer ${otherPlayer.id}`);
+                }
+
                 // Calculate rewind time for otherPlayer based on current player's ping
                 const rewindTime = Date.now() - player.ping; 
                 const historicalHeadOtherPlayer = this.getHistoricalPosition(otherPlayer, rewindTime);
+
+                // Explicit Head-to-Head Collision Check
+                const distanceHeads = Math.hypot(player.x - historicalHeadOtherPlayer.x, player.y - historicalHeadOtherPlayer.y);
+                if (Constants.DEBUG_MODE) {
+                    console.log(`    Head-to-Head: Player ${player.id} Head (${player.x.toFixed(2)}, ${player.y.toFixed(2)}) vs OtherPlayer ${otherPlayer.id} Historical Head (${historicalHeadOtherPlayer.x.toFixed(2)}, ${historicalHeadOtherPlayer.y.toFixed(2)})`);
+                    console.log(`    Distance Heads: ${distanceHeads.toFixed(2)}, Radii Sum: ${(player.radius + otherPlayer.radius).toFixed(2)}`);
+                }
+                if (distanceHeads < player.radius + otherPlayer.radius) {
+                    if (Constants.DEBUG_MODE) {
+                        console.log(`    COLLISION! Head-to-Head: Player ${player.id} with OtherPlayer ${otherPlayer.id}`);
+                    }
+                    playersToKill.add(player);
+                    return; // Collision detected, no need to check body
+                }
 
                 // Reconstruct historical body segments for otherPlayer
                 // This is an approximation: we assume segments maintain their relative offset from the head
@@ -146,7 +164,15 @@ class CollisionSystem {
                     };
 
                     // Check collision of current player's head with historical segment
-                                        if (Math.hypot(player.x - historicalSegment.x, player.y - historicalSegment.y) < player.radius + otherPlayer.radius) { // More accurate radius check
+                    const distanceHeadToSegment = Math.hypot(player.x - historicalSegment.x, player.y - historicalSegment.y);
+                    if (Constants.DEBUG_MODE) {
+                        console.log(`    Head-to-Body: Player ${player.id} Head (${player.x.toFixed(2)}, ${player.y.toFixed(2)}) vs OtherPlayer ${otherPlayer.id} Segment ${i} Historical (${historicalSegment.x.toFixed(2)}, ${historicalSegment.y.toFixed(2)})`);
+                        console.log(`    Distance Head-to-Segment: ${distanceHeadToSegment.toFixed(2)}, Radii Sum: ${(player.radius + Constants.SNAKE_SEGMENT_RADIUS).toFixed(2)}`);
+                    }
+                    if (distanceHeadToSegment < player.radius + Constants.SNAKE_SEGMENT_RADIUS) { // More accurate radius check
+                        if (Constants.DEBUG_MODE) {
+                            console.log(`    COLLISION! Head-to-Body: Player ${player.id} with OtherPlayer ${otherPlayer.id} body segment ${i}`);
+                        }
                         playersToKill.add(player);
                         return; // Exit inner loop once collision is detected
                     }

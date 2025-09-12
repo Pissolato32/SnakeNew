@@ -6,7 +6,7 @@ class FoodManager {
     constructor() {
         this.food = new Map();
         this.foodPool = [];
-        this.foodSpatialHashing = new SpatialHashing(200);
+        this.foodSpatialHashing = new SpatialHashing(40); // Changed from 200 to 40
         this.FOOD_TYPES = FOOD_TYPES;
     }
 

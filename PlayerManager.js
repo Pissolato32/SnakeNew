@@ -7,7 +7,7 @@ class PlayerManager {
     constructor(io, foodManager) {
         this.io = io;
         this.players = {};
-        this.playerSpatialHashing = new SpatialHashing(200);
+        this.playerSpatialHashing = new SpatialHashing(200); // Changed from 200 to 40
         this.foodManager = foodManager;
         this.SPAWN_BUFFER = SPAWN_BUFFER;
     }
@@ -33,7 +33,7 @@ class PlayerManager {
             isBoosting: false,
             aiState: 'FARMING',
             powerups: {},
-            ping: 0 // Initialize ping
+            ping: isBot ? require('./Constants').NETWORK_UPDATE_RATE_MS * 2 : 0 // Initialize ping, simulate for bots
         };
         newPlayer.body.addFirst(startPos);
         newPlayer.targetAngle = newPlayer.angle;

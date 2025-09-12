@@ -97,7 +97,7 @@ class NetworkManager {
                 const playerDelta = {};
                 let changed = false;
                 // Only check critical, frequently changing properties
-                const propsToCheck = ['x', 'y', 'angle', 'maxLength', 'radius', 'isBoosting', 'ping'];
+                const propsToCheck = ['x', 'y', 'angle', 'maxLength', 'radius', 'isBoosting', 'ping']; // Re-add properties for growth and state
                 for (const key of propsToCheck) {
                     let currentValue = currentPlayer[key];
                     let lastValue = lastPlayer[key];

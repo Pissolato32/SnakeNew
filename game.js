@@ -307,6 +307,10 @@ class Game {
         const self = this.players[this.selfId];
         if (!self) return;
 
+        if (this.showDebugPanel) {
+            console.log(`CLIENT - Player ${self.id} Pos: (${self.x.toFixed(2)}, ${self.y.toFixed(2)})`);
+        }
+
         if (this.isDead) { // If player is dead, stop sending input
             this.socket.emit('player-update', { angle: self.angle, isBoosting: false }); // Send no input, no boosting
             // Still update camera for smooth view of the death scene

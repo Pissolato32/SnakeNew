@@ -1,3 +1,4 @@
+const DEBUG_MODE = true;
 const worldSize = 30000;
 const foodAmount = 500;
 const BOT_COUNT = 30;
@@ -20,6 +21,7 @@ const gridCellSize = 200;
 
 // Game Loop and Physics Constants
 const GAME_TICK_RATE_MS = 1000 / 60; // 60 FPS
+const NETWORK_UPDATE_RATE_MS = 1000 / 30; // 30 FPS for network updates
 const POWERUP_SPAWN_INTERVAL_MS = 15000;
 const MIN_POWERUPS = 5;
 const FOOD_MAGNET_RADIUS = 200;
@@ -37,6 +39,7 @@ const BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP = 5;
 const BOT_MANAGEMENT_INTERVAL_MS = 5000;
 const MIN_BOT_COUNT = 5;
 const BOT_COUNT_HUMAN_MULTIPLIER = 2;
+const SNAKE_SEGMENT_RADIUS = 6; // New constant for snake body segment radius
 
 // AI Constants
 const AI_VISION_RANGE_DIMENSION = 800; // Half width/height for vision range
@@ -65,6 +68,7 @@ module.exports = {
 
     // Export new constants
     GAME_TICK_RATE_MS,
+    NETWORK_UPDATE_RATE_MS, // Export the new constant
     POWERUP_SPAWN_INTERVAL_MS,
     MIN_POWERUPS,
     FOOD_MAGNET_RADIUS,
@@ -82,6 +86,7 @@ module.exports = {
     BOT_MANAGEMENT_INTERVAL_MS,
     MIN_BOT_COUNT,
     BOT_COUNT_HUMAN_MULTIPLIER,
+    SNAKE_SEGMENT_RADIUS,
 
     // Export AI constants
     AI_VISION_RANGE_DIMENSION,
@@ -95,5 +100,6 @@ module.exports = {
     AI_SENSOR_LENGTH_MULTIPLIER,
     AI_GOAL_VECTOR_WEIGHT,
     AI_AVOIDANCE_VECTOR_WEIGHT,
-    AI_STEERING_MAGNITUDE_THRESHOLD
+    AI_STEERING_MAGNITUDE_THRESHOLD,
+    DEBUG_MODE
 };
