@@ -1,10 +1,11 @@
-const { NodeState, Sequence, Selector, Action, Condition } = require('./BehaviorTree');
-const { worldSize, BOT_BOUNDARY_BUFFER, AI_VISION_RANGE_DIMENSION, AI_VISION_RANGE_WIDTH, AI_THREAT_SIZE_RATIO, AI_FLEE_THRESHOLD_BASE, AI_FLEE_THRESHOLD_INCREASED, AI_FLEE_THRESHOLD_SIZE_RATIO, AI_ATTACK_THRESHOLD, AI_ATTACK_SIZE_ADVANTAGE, AI_SENSOR_LENGTH_MULTIPLIER, AI_GOAL_VECTOR_WEIGHT, AI_AVOIDANCE_VECTOR_WEIGHT, AI_STEERING_MAGNITUDE_THRESHOLD } = require('./Constants');
+import { NodeState, Sequence, Selector, Action, Condition } from './BehaviorTree.js';
+import { worldSize, BOT_BOUNDARY_BUFFER, AI_VISION_RANGE_DIMENSION, AI_VISION_RANGE_WIDTH, AI_THREAT_SIZE_RATIO, AI_FLEE_THRESHOLD_BASE, AI_FLEE_THRESHOLD_INCREASED, AI_FLEE_THRESHOLD_SIZE_RATIO, AI_ATTACK_THRESHOLD, AI_ATTACK_SIZE_ADVANTAGE, AI_SENSOR_LENGTH_MULTIPLIER, AI_GOAL_VECTOR_WEIGHT, AI_AVOIDANCE_VECTOR_WEIGHT, AI_STEERING_MAGNITUDE_THRESHOLD } from './Constants.js';
 
 class AIManager {
-    constructor(playerManager, foodManager) {
+    constructor(playerManager, foodManager, logger) {
         this.playerManager = playerManager;
         this.foodManager = foodManager;
+        this.logger = logger;
         this._isThreatNearby = this._isThreatNearby.bind(this);
         this._isPreyNearby = this._isPreyNearby.bind(this);
         this._flee = this._flee.bind(this);
@@ -155,10 +156,7 @@ class AIManager {
 
     // --- Steering & Avoidance Helper ---
     // This combines the goal with avoidance logic and sets the bot's final targetAngle
-    _applySteering(context, goalVector) {
-        const { bot, playerManager } = context;
-
-        // --- Avoidance Vector Calculation ---
+    _getAvoidanceVector(bot, playerManager) {
         let avoidanceVector = { x: 0, y: 0 };
         const SENSOR_LENGTH = bot.radius * AI_SENSOR_LENGTH_MULTIPLIER;
 
@@ -169,7 +167,7 @@ class AIManager {
         else if (bot.y > worldSize - BOT_BOUNDARY_BUFFER) avoidanceVector.y = -1;
 
         // Obstacle avoidance (other snakes)
-        const visionRange = { x: bot.x - SENSOR_LENGTH, y: bot.y - SENSOR_LENGTH, width: SENSOR_LENGTH*2, height: SENSOR_LENGTH*2 };
+        const visionRange = { x: bot.x - SENSOR_LENGTH, y: bot.y - SENSOR_LENGTH, width: SENSOR_LENGTH * 2, height: SENSOR_LENGTH * 2 };
         const nearbyPlayers = playerManager.playerSpatialHashing.query(visionRange);
         const sensors = [
             { angle: 0, weight: 1.0 },
@@ -193,8 +191,10 @@ class AIManager {
                 }
             }
         }
+        return avoidanceVector;
+    }
 
-        // --- Vector Combination ---
+    _combineVectors(goalVector, avoidanceVector) {
         const goalMag = Math.hypot(goalVector.x, goalVector.y);
         if (goalMag > 0) {
             goalVector.x /= goalMag;
@@ -208,19 +208,29 @@ class AIManager {
         }
 
         const finalVector = {
-            x: goalVector.x * AI_GOAL_VECTOR_WEIGHT + avoidanceVector.x * AI_AVOIDANCE_VECTOR_WEIGHT, // Avoidance is high priority
+            x: goalVector.x * AI_GOAL_VECTOR_WEIGHT + avoidanceVector.x * AI_AVOIDANCE_VECTOR_WEIGHT,
             y: goalVector.y * AI_GOAL_VECTOR_WEIGHT + avoidanceVector.y * AI_AVOIDANCE_VECTOR_WEIGHT
         };
+
+        return finalVector;
+    }
+
+    _applySteering(context, goalVector) {
+        const { bot, playerManager } = context;
+
+        const avoidanceVector = this._getAvoidanceVector(bot, playerManager);
+        const finalVector = this._combineVectors(goalVector, avoidanceVector);
 
         const finalMag = Math.hypot(finalVector.x, finalVector.y);
         if (finalMag > AI_STEERING_MAGNITUDE_THRESHOLD) {
             bot.targetAngle = Math.atan2(finalVector.y, finalVector.x);
         }
 
+        const avoidanceMag = Math.hypot(avoidanceVector.x, avoidanceVector.y);
         if (avoidanceMag > AI_STEERING_MAGNITUDE_THRESHOLD) {
             bot.isBoosting = true;
         }
     }
 }
 
-module.exports = AIManager;
+export default AIManager;

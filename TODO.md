@@ -1,0 +1,9 @@
+- [x] Unified head-to-any-part collision check: head-to-head kills both, head-to-body kills the colliding player.
+- [x] Added filter to skip non-player objects in spatial hash query.
+- [x] Added new food types with glow effects and special abilities (speed boost, shield).
+- [x] Enhanced snake visuals with gradients, shadows, and improved eye details.
+- [x] Improved food rendering with glow and gradient effects.
+- [x] Upgraded minimap to show threat markers for large snakes and bots.
+- [x] Added skin selector to login screen.
+- [x] Added new powerup types (speed boost, shield).
+- [x] Optimized rendering performance with better spatial grid usage.

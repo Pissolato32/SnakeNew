@@ -1,4 +1,5 @@
-const { hslToRgb, getSafeSpawnPoint } = require('../Utils');
+import { describe, test, expect } from '@jest/globals';
+import { hslToRgb, getSafeSpawnPoint } from '../Utils.js';
 
 describe('Utils', () => {
   test('hslToRgb converts HSL to RGB correctly for red', () => {

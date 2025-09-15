@@ -1,0 +1,296 @@
+/* =================================================================================
+// style.css - Styles for a slither.io style game
+// ================================================================================= */
+
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    background-color: #1a1a1a;
+    font-family: 'Arial', sans-serif;
+}
+
+canvas {
+    display: none; /* Hidden by default */
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Login Screen */
+#loginScreen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(17, 17, 17, 1);
+    z-index: 100;
+}
+
+#deathScreen {
+    display: none; /* Hidden by default */
+    justify-content: center; /* Added from original #loginScreen, #deathScreen */
+    align-items: center; /* Added from original #loginScreen, #deathScreen */
+    position: absolute; /* Added from original #loginScreen, #deathScreen */
+    top: 0; /* Added from original #loginScreen, #deathScreen */
+    left: 0; /* Added from original #loginScreen, #deathScreen */
+    width: 100%; /* Added from original #loginScreen, #deathScreen */
+    height: 100%; /* Added from original #loginScreen, #deathScreen */
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 100; /* Added from original #loginScreen, #deathScreen */
+}
+
+.login-box, .death-box {
+    text-align: center;
+    color: white;
+    background-color: #1a1a1a;
+    padding: 40px;
+    border-radius: 20px;
+}
+
+.login-box h1 {
+    font-size: 5em;
+    color: #4CAF50;
+    margin-bottom: 20px;
+}
+
+#nicknameInput {
+    width: 300px;
+    padding: 15px;
+    font-size: 1.2em;
+    border: 2px solid #4CAF50;
+    background: #333;
+    color: white;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.skin-selector {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.skin-selector label {
+    display: block;
+    color: white;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+#skinSelect {
+    width: 300px;
+    padding: 10px;
+    font-size: 1.1em;
+    border: 2px solid #4CAF50;
+    background: #333;
+    color: white;
+    border-radius: 5px;
+}
+
+.color-selector {
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    gap: 15px;
+}
+
+.color-display {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #4CAF50;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.arrow-button {
+    font-size: 1.5em;
+    background: none;
+    border: 1px solid #4CAF50;
+    color: #4CAF50;
+    border-radius: 5px;
+    width: 44px; /* Match height of color-display */
+    height: 44px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.arrow-button:hover {
+    background: #4CAF50;
+    color: white;
+}
+
+#playButton, #playAgainButton {
+    padding: 15px 40px;
+    font-size: 1.5em;
+    color: white;
+    background-color: #4CAF50;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#playButton:hover, #playAgainButton:hover {
+    background-color: #45a049;
+}
+
+.death-box {
+     border: 2px solid #FF5722;
+     box-shadow: 0 0 20px rgba(255, 87, 34, 0.5);
+}
+
+.death-box h1 {
+    font-size: 4em;
+    color: #FF5722;
+    margin-bottom: 10px;
+}
+
+.death-box p {
+    font-size: 1.5em;
+    margin-bottom: 30px;
+}
+
+
+/* Game UI */
+#gameUI {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: white;
+    pointer-events: none; /* Allow mouse events to pass through to the canvas */
+}
+
+#leaderboard {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 10px;
+    width: 250px;
+}
+
+#leaderboard h2 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    font-size: 1.5em;
+}
+
+#leaderboardList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#leaderboardList li {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 1.1em;
+}
+
+#score {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 1.2em;
+}
+
+/* Debug Panel Styles */
+#debug-panel {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #00ff00;
+    border: 1px solid #00ff00;
+    border-radius: 5px;
+    padding: 15px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    z-index: 1000;
+    width: 350px;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+    display: none; /* Hidden by default */
+    cursor: move;
+}
+
+#debug-panel .profiler-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #00ff00;
+}
+
+#debug-panel h2 {
+    margin: 0;
+    font-size: 16px;
+}
+
+#debug-panel .close-button {
+    background: none;
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+#debug-panel .close-button:hover {
+    background-color: #00ff00;
+    color: #000;
+}
+
+#debug-panel .profiler-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#debug-panel .metric-group {
+    margin-bottom: 10px;
+}
+
+#debug-panel .metric-group h3 {
+    font-size: 14px;
+    color: #00cc00;
+    margin: 0 0 5px 0;
+    border-bottom: 1px solid #008800;
+    padding-bottom: 3px;
+}
+
+#debug-panel .metric-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+#debug-panel .metric-item span:first-child {
+    color: #00cc00;
+}
+
+#debug-panel .metric-item span:last-child {
+    font-weight: bold;
+}
+
+#profilerChart {
+    margin-top: 10px;
+    width: 100%;
+}

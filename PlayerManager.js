@@ -1,39 +1,53 @@
-const { BOT_NAMES, SPAWN_BUFFER } = require('./Constants');
-const { getSafeSpawnPoint } = require('./Utils');
-const SpatialHashing = require('./SpatialHashing');
-const CircularBuffer = require('./CircularBuffer');
+import { BOT_NAMES, SPAWN_BUFFER, NETWORK_UPDATE_RATE_MS, PLAYER_SPATIAL_HASH_CELL_SIZE, DEFAULT_PLAYER_COLORS, SNAKE_BODY_BUFFER_SIZE, SNAKE_HEAD_HISTORY_SIZE, INITIAL_SNAKE_LENGTH, INITIAL_SNAKE_RADIUS, INITIAL_SNAKE_TURN_RATE, INITIAL_SNAKE_SPEED, DEATH_FOOD_DROP_STEP, DEATH_FOOD_DROP_OFFSET, DEATH_FOOD_TYPE_INDEX, DEATH_FOOD_COLOR, DEFAULT_BOT_COUNT, DEATH_FOOD_RGB } from './Constants.js';
+import { getSafeSpawnPoint } from './Utils.js';
+import SpatialHashing from './SpatialHashing.js';
+import CircularBuffer from './public/CircularBuffer.js';
 
 class PlayerManager {
-    constructor(io, foodManager) {
+    constructor(io, foodManager, logger) {
         this.io = io;
         this.players = {};
-        this.playerSpatialHashing = new SpatialHashing(200); // Changed from 200 to 40
+        this.playerSpatialHashing = new SpatialHashing(PLAYER_SPATIAL_HASH_CELL_SIZE);
         this.foodManager = foodManager;
         this.SPAWN_BUFFER = SPAWN_BUFFER;
+        this.logger = logger;
     }
 
-    createPlayer(id, nickname, isBot = false) {
+    createPlayer(id, nickname, isBot = false, skin = 'default', color = null) {
         const startPos = getSafeSpawnPoint(this.players, SPAWN_BUFFER);
+
+        let playerColor = color;
+        if (!playerColor) {
+            playerColor = DEFAULT_PLAYER_COLORS[Math.floor(Math.random() * DEFAULT_PLAYER_COLORS.length)];
+        }
+
+        const r = parseInt(playerColor.slice(1, 3), 16) || 0;
+        const g = parseInt(playerColor.slice(3, 5), 16) || 0;
+        const b = parseInt(playerColor.slice(5, 7), 16) || 0;
+
         const newPlayer = {
             id: id,
             nickname: nickname,
             x: startPos.x,
             y: startPos.y,
-            color: `rgb(125, 125, 125)`,
-            rgb: { r: 125, g: 125, b: 125 },
-            body: new CircularBuffer(100),
-            headHistory: new CircularBuffer(30), // For Lag Compensation (30 frames = 500ms at 60fps)
-            maxLength: 30,
-            radius: 12,
+            color: playerColor,
+            rgb: { r, g, b },
+            body: new CircularBuffer(SNAKE_BODY_BUFFER_SIZE),
+            headHistory: new CircularBuffer(SNAKE_HEAD_HISTORY_SIZE),
+            maxLength: INITIAL_SNAKE_LENGTH,
+            radius: INITIAL_SNAKE_RADIUS,
             angle: Math.random() * 2 * Math.PI,
             targetAngle: 0,
-            turnRate: 0.1,
-            speed: 4,
+            turnRate: INITIAL_SNAKE_TURN_RATE,
+            speed: INITIAL_SNAKE_SPEED,
             isBot: isBot,
             isBoosting: false,
             aiState: 'FARMING',
             powerups: {},
-            ping: isBot ? require('./Constants').NETWORK_UPDATE_RATE_MS * 2 : 0 // Initialize ping, simulate for bots
+            ping: isBot ? NETWORK_UPDATE_RATE_MS * 2 : 0,
+            lastFoodDropTime: 0,
+            boostDropCounter: 0,
+            skin: skin
         };
         newPlayer.body.addFirst(startPos);
         newPlayer.targetAngle = newPlayer.angle;
@@ -54,18 +68,42 @@ class PlayerManager {
     }
 
     killPlayer(player) {
-        const foodValueToRelease = player.maxLength * (0.6 + Math.random() * 0.15);
-        let remainingValueToRelease = foodValueToRelease;
-        while (remainingValueToRelease > 0 && player.body.length > 0) {
-            const segment = player.body.get(Math.floor(Math.random() * player.body.length));
-            const offsetX = (Math.random() - 0.5) * 20;
-            const offsetY = (Math.random() - 0.5) * 20;
-            let chosenFoodTypeIndex = Math.floor(Math.random() * this.foodManager.FOOD_TYPES.length);
-            while (this.foodManager.FOOD_TYPES[chosenFoodTypeIndex].score > remainingValueToRelease && chosenFoodTypeIndex > 0) {
-                chosenFoodTypeIndex--;
+        player.isDead = true;
+
+        if (player.body.length > 0) {
+            for (let i = 0; i < player.body.length; i += DEATH_FOOD_DROP_STEP) {
+                const segment = player.body.get(i);
+                if (!segment) continue;
+
+                const offsetX = (Math.random() - 0.5) * DEATH_FOOD_DROP_OFFSET;
+                const offsetY = (Math.random() - 0.5) * DEATH_FOOD_DROP_OFFSET;
+
+                const foodItem = this.foodManager.createFood(
+                    segment.x + offsetX, 
+                    segment.y + offsetY, 
+                    DEATH_FOOD_TYPE_INDEX, 
+                    this.players, 
+                    this.SPAWN_BUFFER
+                );
+
+                foodItem.glow = true;
+                foodItem.color = DEATH_FOOD_COLOR;
+                foodItem.rgb = DEATH_FOOD_RGB;
+
+                this.foodManager.addFood(foodItem);
             }
-            this.foodManager.addFood(this.foodManager.createFood(segment.x + offsetX, segment.y + offsetY, chosenFoodTypeIndex, this.players, this.SPAWN_BUFFER));
-            remainingValueToRelease -= this.foodManager.FOOD_TYPES[chosenFoodTypeIndex].score;
+        }
+
+        for (let i = 0; i < player.body.length; i++) {
+            const segment = player.body.get(i);
+            this.playerSpatialHashing.remove(segment);
+        }
+
+        if (player.body && typeof player.body.clear === 'function') {
+            player.body.clear();
+        }
+        if (player.headHistory && typeof player.headHistory.clear === 'function') {
+            player.headHistory.clear();
         }
 
         if (!player.isBot) {
@@ -92,7 +130,7 @@ class PlayerManager {
     }
 
     initBots() {
-        const botCount = process.env.BOT_COUNT || 10;
+        const botCount = process.env.BOT_COUNT || DEFAULT_BOT_COUNT;
         for (let i = 0; i < botCount; i++) { this.addBot(); }
     }
 
@@ -105,4 +143,4 @@ class PlayerManager {
     }
 }
 
-module.exports = PlayerManager;
+export default PlayerManager;

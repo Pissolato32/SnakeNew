@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game Performance Profiler</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .profiler-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .metric-card {
+            background: #2a2a2a;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.1);
+        }
+
+        .metric-title {
+            color: #ffff00;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 200px;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .chart {
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            border: 1px solid #333;
+        }
+
+        .warning {
+            color: #ff6600;
+        }
+
+        .critical {
+            color: #ff0000;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            50% {
+                opacity: 1;
+            }
+
+            51%,
+            100% {
+                opacity: 0.5;
+            }
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        button {
+            background: #2a2a2a;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #00ff00;
+            color: #1a1a1a;
+        }
+
+        .memory-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .memory-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            transition: width 0.3s ease;
+        }
+
+        .bottleneck-alert {
+            background: #ff000020;
+            border: 1px solid #ff0000;
+            color: #ff0000;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .network-graph {
+            grid-column: span 2;
+        }
+
+        .optimization-tips {
+            grid-column: span 2;
+            background: #0a2a0a;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🐍 Snake Game Performance Profiler</h1>
+
+    <div class="controls">
+        <button onclick="startProfiling()">Iniciar Profiling</button>
+        <button onclick="stopProfiling()">Parar</button>
+        <button onclick="resetMetrics()">Reset</button>
+        <button onclick="exportData()">Exportar Dados</button>
+    </div>
+
+    <div class="bottleneck-alert" id="bottleneckAlert">
+        ⚠️ Gargalo detectado! Verifique as métricas abaixo.
+    </div>
+
+    <div class="profiler-container">
+        <div class="metric-card">
+            <div class="metric-title">FPS</div>
+            <div class="metric-value" id="fpsValue">0</div>
+            <div class="metric-unit">frames por segundo</div>
+            <div class="chart-container">
+                <canvas class="chart" id="fpsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">Frame Time</div>
+            <div class="metric-value" id="frameTimeValue">0</div>
+            <div class="metric-unit">ms por frame</div>
+            <div class="chart-container">
+                <canvas class="chart" id="frameTimeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">Update Time</div>
+            <div class="metric-value" id="updateTimeValue">0</div>
+            <div class="metric-unit">ms</div>
+            <div class="chart-container">
+                <canvas class="chart" id="updateTimeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">Render Time</div>
+            <div class="metric-value" id="renderTimeValue">0</div>
+            <div class="metric-unit">ms</div>
+            <div class="chart-container">
+                <canvas class="chart" id="renderTimeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">Network Latency</div>
+            <div class="metric-value" id="latencyValue">0</div>
+            <div class="metric-unit">ms</div>
+            <div class="chart-container">
+                <canvas class="chart" id="latencyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">Memory Usage</div>
+            <div class="metric-value" id="memoryValue">0</div>
+            <div class="metric-unit">MB</div>
+            <div class="memory-bar">
+                <div class="memory-fill" id="memoryFill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="metric-card network-graph">
+            <div class="metric-title">Network Activity</div>
+            <div class="chart-container">
+                <canvas class="chart" id="networkChart"></canvas>
+            </div>
+        </div>
+
+        <div class="metric-card optimization-tips">
+            <div class="metric-title">Dicas de Otimização</div>
+            <div id="optimizationTips">
+                <p>💡 Aguardando dados de performance...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SnakeProfiler {
+            constructor() {
+                this.isRunning = false;
+                this.metrics = {
+                    fps: [],
+                    frameTime: [],
+                    updateTime: [],
+                    renderTime: [],
+                    latency: [],
+                    memory: []
+                };
+                this.charts = {};
+                this.maxDataPoints = 100;
+                this.lastTime = 0;
+                this.frameCount = 0;
+
+                this.initializeCharts();
+                this.setupPerformanceObserver();
+            }
+
+            initializeCharts() {
+                const chartIds = ['fpsChart', 'frameTimeChart', 'updateTimeChart', 'renderTimeChart', 'latencyChart', 'networkChart'];
+
+                chartIds.forEach(id => {
+                    const canvas = document.getElementById(id);
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = canvas.offsetWidth;
+                    canvas.height = canvas.offsetHeight;
+                    this.charts[id] = ctx;
+                });
+            }
+
+            setupPerformanceObserver() {
+                if ('PerformanceObserver' in window) {
+                    const observer = new PerformanceObserver((list) => {
+                        const entries = list.getEntries();
+                        entries.forEach(entry => {
+                            if (entry.name === 'network-update') {
+                                this.addMetric('updateTime', entry.duration);
+                            }
+                        });
+                    });
+                    observer.observe({ entryTypes: ['measure'] });
+                }
+            }
+
+            start() {
+                this.isRunning = true;
+                this.lastTime = performance.now();
+                this.profileLoop();
+            }
+
+            stop() {
+                this.isRunning = false;
+            }
+
+            profileLoop() {
+                if (!this.isRunning) return;
+
+                const currentTime = performance.now();
+                const deltaTime = currentTime - this.lastTime;
+                this.lastTime = currentTime;
+
+                // Simular métricas (em um jogo real, você obteria essas do seu game loop)
+                this.simulateMetrics(deltaTime);
+
+                // Atualizar displays
+                this.updateDisplays();
+
+                // Verificar gargalos
+                this.checkBottlenecks();
+
+                // Atualizar gráficos
+                this.updateCharts();
+
+                // Gerar dicas de otimização
+                this.generateOptimizationTips();
+
+                requestAnimationFrame(() => this.profileLoop());
+            }
+
+            simulateMetrics(deltaTime) {
+                // Simulação de FPS (entre 55 e 65, com picos de queda)
+                const targetFPS = 60;
+                let currentFPS = targetFPS + (Math.random() * 10 - 5);
+                if (Math.random() < 0.02) { // 2% de chance de um "engasgo"
+                    currentFPS -= Math.random() * 20;
+                }
+                const frameTime = 1000 / currentFPS;
+                this.addMetric('fps', currentFPS);
+                this.addMetric('frameTime', frameTime);
+
+                // Simulação de tempo de atualização e renderização
+                const baseUpdateTime = 1 + Math.random() * 2;
+                const baseRenderTime = 1 + Math.random() * 3;
+                this.addMetric('updateTime', baseUpdateTime);
+                this.addMetric('renderTime', baseRenderTime);
+
+                // Simulação de latência de rede
+                const baseLatency = 20 + Math.random() * 30;
+                this.addMetric('latency', baseLatency);
+
+                // Simulação de uso de memória (aumenta gradualmente)
+                const currentMemory = 50 + this.frameCount * 0.1 + Math.random() * 5;
+                this.addMetric('memory', currentMemory);
+            }
+
+            addMetric(type, value) {
+                this.metrics[type].push(value);
+                if (this.metrics[type].length > this.maxDataPoints) {
+                    this.metrics[type].shift();
+                }
+            }
+
+            updateDisplays() {
+                const fps = this.metrics.fps.length ? this.metrics.fps[this.metrics.fps.length - 1].toFixed(2) : 0;
+                const frameTime = this.metrics.frameTime.length ? this.metrics.frameTime[this.metrics.frameTime.length - 1].toFixed(2) : 0;
+                const updateTime = this.metrics.updateTime.length ? this.metrics.updateTime[this.metrics.updateTime.length - 1].toFixed(2) : 0;
+                const renderTime = this.metrics.renderTime.length ? this.metrics.renderTime[this.metrics.renderTime.length - 1].toFixed(2) : 0;
+                const latency = this.metrics.latency.length ? this.metrics.latency[this.metrics.latency.length - 1].toFixed(2) : 0;
+                const memory = this.metrics.memory.length ? this.metrics.memory[this.metrics.memory.length - 1].toFixed(2) : 0;
+
+                document.getElementById('fpsValue').textContent = fps;
+                document.getElementById('frameTimeValue').textContent = frameTime;
+                document.getElementById('updateTimeValue').textContent = updateTime;
+                document.getElementById('renderTimeValue').textContent = renderTime;
+                document.getElementById('latencyValue').textContent = latency;
+                document.getElementById('memoryValue').textContent = memory;
+
+                this.updateMemoryBar(memory);
+                this.updateValueClasses();
+            }
+
+            updateMemoryBar(memoryValue) {
+                const fill = document.getElementById('memoryFill');
+                const percentage = Math.min(100, (memoryValue / 150) * 100); // Exemplo: 150MB como limite crítico
+                fill.style.width = `${percentage}%`;
+            }
+
+            updateValueClasses() {
+                const fpsValue = parseFloat(document.getElementById('fpsValue').textContent);
+                const frameTimeValue = parseFloat(document.getElementById('frameTimeValue').textContent);
+                const latencyValue = parseFloat(document.getElementById('latencyValue').textContent);
+                const memoryValue = parseFloat(document.getElementById('memoryValue').textContent);
+
+                // FPS
+                const fpsEl = document.getElementById('fpsValue');
+                if (fpsValue < 30) fpsEl.className = 'metric-value critical';
+                else if (fpsValue < 50) fpsEl.className = 'metric-value warning';
+                else fpsEl.className = 'metric-value';
+
+                // Frame Time
+                const frameTimeEl = document.getElementById('frameTimeValue');
+                if (frameTimeValue > 33.3) frameTimeEl.className = 'metric-value critical';
+                else if (frameTimeValue > 20) frameTimeEl.className = 'metric-value warning';
+                else frameTimeEl.className = 'metric-value';
+
+                // Latency
+                const latencyEl = document.getElementById('latencyValue');
+                if (latencyValue > 150) latencyEl.className = 'metric-value critical';
+                else if (latencyValue > 80) latencyEl.className = 'metric-value warning';
+                else latencyEl.className = 'metric-value';
+
+                // Memory
+                const memoryEl = document.getElementById('memoryValue');
+                if (memoryValue > 120) memoryEl.className = 'metric-value critical';
+                else if (memoryValue > 80) memoryEl.className = 'metric-value warning';
+                else memoryEl.className = 'metric-value';
+            }
+
+            checkBottlenecks() {
+                const frameTimeValue = parseFloat(document.getElementById('frameTimeValue').textContent);
+                const updateTimeValue = parseFloat(document.getElementById('updateTimeValue').textContent);
+                const renderTimeValue = parseFloat(document.getElementById('renderTimeValue').textContent);
+                const bottleneckAlert = document.getElementById('bottleneckAlert');
+
+                // Exemplo: Gargalo se Frame Time for alto e uma das sub-métricas dominar
+                if (frameTimeValue > 30 && (updateTimeValue > 15 || renderTimeValue > 15)) {
+                    bottleneckAlert.style.display = 'block';
+                } else {
+                    bottleneckAlert.style.display = 'none';
+                }
+            }
+
+            updateCharts() {
+                this.drawChart('fpsChart', this.metrics.fps, 'rgba(0, 255, 0, 0.5)', 0, 90);
+                this.drawChart('frameTimeChart', this.metrics.frameTime, 'rgba(255, 255, 0, 0.5)', 0, 50);
+                this.drawChart('updateTimeChart', this.metrics.updateTime, 'rgba(255, 102, 0, 0.5)', 0, 10);
+                this.drawChart('renderTimeChart', this.metrics.renderTime, 'rgba(0, 128, 255, 0.5)', 0, 10);
+                this.drawChart('latencyChart', this.metrics.latency, 'rgba(255, 0, 0, 0.5)', 0, 200);
+                this.drawChart('networkChart', this.metrics.latency.map(v => v / 10), 'rgba(255, 255, 255, 0.5)', 0, 20); // Simulação de dados de rede
+            }
+
+            drawChart(chartId, data, color, yMin, yMax) {
+                const ctx = this.charts[chartId];
+                if (!ctx) return;
+
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+                const width = ctx.canvas.width;
+                const height = ctx.canvas.height;
+                const maxDataPoints = this.maxDataPoints;
+
+                if (data.length <= 1) return;
+
+                const xStep = width / (maxDataPoints - 1);
+
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.moveTo(0, height - ((data[0] - yMin) / (yMax - yMin)) * height);
+
+                data.forEach((value, index) => {
+                    const x = index * xStep;
+                    const y = height - ((value - yMin) / (yMax - yMin)) * height;
+                    ctx.lineTo(x, y);
+                });
+
+                ctx.stroke();
+            }
+
+            generateOptimizationTips() {
+                const tipsDiv = document.getElementById('optimizationTips');
+                const frameTimeValue = parseFloat(document.getElementById('frameTimeValue').textContent);
+                const updateTimeValue = parseFloat(document.getElementById('updateTimeValue').textContent);
+                const renderTimeValue = parseFloat(document.getElementById('renderTimeValue').textContent);
+                const memoryValue = parseFloat(document.getElementById('memoryValue').textContent);
+                const latencyValue = parseFloat(document.getElementById('latencyValue').textContent);
+
+                let tips = '<ul>';
+
+                if (frameTimeValue > 25) {
+                    tips += `<li>📉 <strong>FPS Baixo:</strong> O tempo de quadro (${frameTimeValue.toFixed(2)}ms) está alto. Verifique as sub-métricas para encontrar o gargalo.</li>`;
+                }
+
+                if (updateTimeValue > renderTimeValue * 1.5 && updateTimeValue > 5) {
+                    tips += `<li>⚙️ <strong>Gargalo de Lógica (Update):</strong> O tempo de atualização (${updateTimeValue.toFixed(2)}ms) está significativamente maior que o de renderização. Otimize a lógica do jogo (IA, colisões, etc.).</li>`;
+                } else if (renderTimeValue > updateTimeValue * 1.5 && renderTimeValue > 5) {
+                    tips += `<li>🎨 <strong>Gargalo de Renderização:</strong> O tempo de renderização (${renderTimeValue.toFixed(2)}ms) está alto. Tente simplificar a cena, reduzir o número de objetos desenhados ou otimizar as operações de desenho.</li>`;
+                }
+
+                if (memoryValue > 100) {
+                    tips += `<li>🧠 <strong>Alto Uso de Memória:</strong> O jogo está consumindo muita memória (${memoryValue.toFixed(2)}MB). Procure por vazamentos de memória ou otimize o uso de recursos como imagens e sons.</li>`;
+                }
+
+                if (latencyValue > 100) {
+                    tips += `<li>🌐 <strong>Alta Latência de Rede:</strong> A latência (${latencyValue.toFixed(2)}ms) está alta. Verifique a estabilidade da sua conexão ou otimize o código de rede para menos requisições.</li>`;
+                }
+
+                if (tips === '<ul>') {
+                    tips += '<li>✅ <strong>Performance Ótima:</strong> Nenhuma otimização crítica necessária no momento. Continue monitorando!</li>';
+                }
+
+                tips += '</ul>';
+                tipsDiv.innerHTML = tips;
+            }
+
+            resetMetrics() {
+                this.stop();
+                this.metrics = {
+                    fps: [],
+                    frameTime: [],
+                    updateTime: [],
+                    renderTime: [],
+                    latency: [],
+                    memory: []
+                };
+                this.updateDisplays();
+                this.updateCharts();
+                document.getElementById('bottleneckAlert').style.display = 'none';
+                document.getElementById('optimizationTips').innerHTML = '<p>💡 Aguardando dados de performance...</p>';
+            }
+
+            exportData() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.metrics, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "performance_data.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            }
+        }
+
+        const profiler = new SnakeProfiler();
+
+        function startProfiling() {
+            profiler.start();
+        }
+
+        function stopProfiling() {
+            profiler.stop();
+        }
+
+        function resetMetrics() {
+            profiler.resetMetrics();
+        }
+
+        function exportData() {
+            profiler.exportData();
+        }
+    </script>
+</body>
+
+</html>

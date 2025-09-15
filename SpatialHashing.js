@@ -75,4 +75,4 @@ class SpatialHashing {
     }
 }
 
-module.exports = SpatialHashing;
+export default SpatialHashing;

@@ -1,7 +1,8 @@
-const Constants = require('./Constants');
+import * as Constants from './Constants.js';
+import AntiCheat from './server/AntiCheat.js';
 
 class GameLoop {
-    constructor(playerManager, foodManager, powerupManager, collisionSystem, networkManager, aiManager) {
+    constructor(playerManager, foodManager, powerupManager, collisionSystem, networkManager, aiManager, logger) {
         this.playerManager = playerManager;
         this.foodManager = foodManager;
         this.powerupManager = powerupManager;
@@ -9,30 +10,33 @@ class GameLoop {
         this.networkManager = networkManager;
         this.aiManager = aiManager; // Store AIManager instance
         this.botTickCounter = 0;
+        this.logger = logger;
+        this.antiCheat = new AntiCheat(this.logger);
     }
 
     initGame() {
         // Initial food and powerups are now handled by the dynamic management loop
-        this.playerManager.initBots(); // Initialize bots
     }
 
     start() {
         // Main game loop for physics, AI, and collisions
         setInterval(() => {
-            console.time("GameLoopTick"); // Start timing
             this.botTickCounter++;
             const players = this.playerManager.getPlayers();
 
             for (const id in players) {
                 const player = players[id];
 
-                if (Constants.DEBUG_MODE && !player.isBot) {
-                    console.log(`SERVER - Player ${player.id} Pos: (${player.x.toFixed(2)}, ${player.y.toFixed(2)})`);
+                if (player.isDead) {
+                    // Skip updating dead players and their body segments in spatial hashing and other updates
+                    continue;
                 }
+
+                this.logger.debug(`SERVER - Player ${player.id} Pos: (${player.x.toFixed(2)}, ${player.y.toFixed(2)})`);
 
                 // --- AI Logic ---
                 if (player.isBot) {
-                    if (this.botTickCounter % 2 === 0) { // Run AI at 30 FPS
+                    if (this.botTickCounter % Constants.AI_TICK_RATE_DIVISOR === 0) { // Run AI at 30 FPS
                         this.aiManager.update(player);
                     }
                 }
@@ -41,25 +45,45 @@ class GameLoop {
                 const angleDiff = player.targetAngle - player.angle;
                 player.angle += Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff)) * player.turnRate;
 
-                const baseSpeed = Math.max(Constants.BASE_SPEED_MIN, Constants.BASE_SPEED_MAX_INITIAL - (player.maxLength / Constants.LENGTH_DIVISOR_SPEED));
+                player.baseSpeed = Math.max(Constants.BASE_SPEED_MIN, Constants.BASE_SPEED_MAX_INITIAL - (player.maxLength / Constants.LENGTH_DIVISOR_SPEED));
                 player.turnRate = Math.max(Constants.TURN_RATE_MIN, Constants.TURN_RATE_MAX_INITIAL - (player.maxLength / Constants.LENGTH_DIVISOR_TURN_RATE) * Constants.TURN_RATE_MIN);
 
-                if (player.isBoosting && player.maxLength > Constants.BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP) {
-                    player.speed = baseSpeed * Constants.BOOST_SPEED_MULTIPLIER;
-                    player.maxLength -= Constants.BOOST_LENGTH_CONSUMPTION_RATE;
-                    if (Math.random() < Constants.BOOST_FOOD_DROP_PROBABILITY && player.body.length > Constants.BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP) {
-                        const tail = player.body.get(player.body.length - 1);
-                        this.foodManager.addFood(this.foodManager.createFood(tail.x, tail.y, 0));
+                let targetSpeed;
+                if (player.isBoosting && player.body.length > Constants.BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP) {
+                    targetSpeed = player.baseSpeed * Constants.BOOST_SPEED_MULTIPLIER;
+                    player.boostDropCounter++;
+
+                    // Drop food every few ticks to create a trail
+                    if (player.boostDropCounter >= Constants.BOOST_FOOD_DROP_INTERVAL) {
+                        player.maxLength -= 1; // Consume length
+                        player.boostDropCounter = 0;
+
+                        const dropDistance = player.radius + Constants.BOOST_FOOD_DROP_DISTANCE;
+                        const dropX = player.x - Math.cos(player.angle) * dropDistance;
+                        const dropY = player.y - Math.sin(player.angle) * dropDistance;
+                        
+                        if (Math.hypot(dropX, dropY) < Constants.worldSize / 2 - 10) {
+                            // Drop a single, low-value food item (type 0)
+                            const food = this.foodManager.createFood(dropX, dropY, 0, this.playerManager.getPlayers(), Constants.SPAWN_BUFFER);
+                            this.foodManager.addFood(food);
+                        }
                     }
+
                     if (player.maxLength <= Constants.BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP) {
                         player.isBoosting = false;
                     }
                 } else {
-                    player.speed = baseSpeed;
+                    targetSpeed = player.baseSpeed;
                 }
+
+                // Smoothly interpolate the current speed towards the target speed
+                player.speed += (targetSpeed - player.speed) * Constants.PLAYER_SPEED_INTERPOLATION_FACTOR;
 
                 player.x += Math.cos(player.angle) * player.speed;
                 player.y += Math.sin(player.angle) * player.speed;
+
+                // Update spatial hash with new position
+                this.playerManager.playerSpatialHashing.update(player);
 
                 player.headHistory.addFirst({ x: player.x, y: player.y, timestamp: Date.now() });
 
@@ -68,11 +92,49 @@ class GameLoop {
                     player.body.removeLast();
                 }
 
+                // Update spatial hash for each body segment for accurate collision detection
+                for (let i = 0; i < player.body.length; i++) {
+                    const segment = player.body.get(i);
+                    this.playerManager.playerSpatialHashing.update(segment);
+                }
+
                 this.playerManager.playerSpatialHashing.update(player);
+
+                // Food magnet one-time attraction
+                if (player.powerups.foodMagnet && player.powerups.foodMagnet.attractOnce) {
+                    const foodItems = this.foodManager.getFood();
+                    foodItems.forEach(f => {
+                        const distance = Math.hypot(player.x - f.x, player.y - f.y);
+                        if (distance < Constants.FOOD_MAGNET_RADIUS) {
+                            const angle = Math.atan2(player.y - f.y, player.x - f.x);
+                            const force = Constants.FOOD_MAGNET_FORCE * Constants.FOOD_MAGNET_FORCE_MULTIPLIER * (Constants.FOOD_MAGNET_RADIUS - distance) / Constants.FOOD_MAGNET_RADIUS;
+                            f.x += Math.cos(angle) * force;
+                            f.y += Math.sin(angle) * force;
+                            // Ensure food stays within bounds
+                            const distFromCenter = Math.hypot(f.x, f.y);
+                            if (distFromCenter > Constants.worldSize / 2 - 10) {
+                                const angleToCenter = Math.atan2(f.y, f.x);
+                                f.x = Math.cos(angleToCenter) * (Constants.worldSize / 2 - 10);
+                                f.y = Math.sin(angleToCenter) * (Constants.worldSize / 2 - 10);
+                            }
+                        }
+                    });
+                    player.powerups.foodMagnet.attractOnce = false;
+                }
+
+                // Anti-cheat checks
+                if (!player.isBot) {
+                    this.antiCheat.updatePlayerHistory(player);
+                    if (this.antiCheat.detectSpeedHack(player) || this.antiCheat.detectTeleport(player)) {
+                        this.logger.warn(`Cheating detected for player ${player.id}, removing from game`);
+                        this.playerManager.killPlayer(player);
+                    }
+                }
             }
 
             this.collisionSystem.processCollisions();
-            console.timeEnd("GameLoopTick");
+
+            this.foodManager.updateFoodMovement(); // Update food positions for floating effect
 
         }, Constants.GAME_TICK_RATE_MS);
 
@@ -104,21 +166,22 @@ class GameLoop {
             if (bots.length < targetBotCount) {
                 this.playerManager.addBot();
             } else if (bots.length > targetBotCount) {
-                const botToRemove = bots[0]; // Simple strategy: remove the first bot in the list
+                // Remove the bot with the lowest score
+                const botToRemove = bots.reduce((lowest, bot) => bot.maxLength < lowest.maxLength ? bot : lowest);
                 if (botToRemove) {
                     this.playerManager.removePlayer(botToRemove);
                 }
             }
 
             // --- Dynamic Food Management ---
-            const targetFoodCount = allPlayers.length * Constants.FOOD_PER_PLAYER;
+            const targetFoodCount = Constants.DYNAMIC_FOOD_TARGET_BASE + (allPlayers.length * Constants.DYNAMIC_FOOD_TARGET_PER_PLAYER);
             const currentFoodCount = this.foodManager.getFood().length;
             if (currentFoodCount < targetFoodCount) {
                 const foodToAdd = targetFoodCount - currentFoodCount;
-                for (let i = 0; i < foodToAdd; i++) {
-                    this.foodManager.addFood(this.foodManager.createFood(undefined, undefined, undefined, allPlayers, Constants.SPAWN_BUFFER));
-                }
+                this.foodManager.addFoodInBatch(foodToAdd, this.playerManager.getPlayers(), Constants.SPAWN_BUFFER);
             }
+
+            // Removed expired food removal to prevent food disappearing
 
             // --- Dynamic Powerup Management ---
             if (this.powerupManager.getPowerups().length < Constants.MIN_POWERUPS) {
@@ -129,4 +192,4 @@ class GameLoop {
     }
 }
 
-module.exports = GameLoop;
+export default GameLoop;

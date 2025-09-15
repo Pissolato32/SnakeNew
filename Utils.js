@@ -1,6 +1,6 @@
-const { worldSize } = require('./Constants');
+import { worldSize } from './Constants.js';
 
-function hslToRgb(h, s, l) {
+export function hslToRgb(h, s, l) {
     s /= 100; l /= 100;
     let c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c/2, r = 0, g = 0, b = 0;
     if (0 <= h && h < 60) { r = c; g = x; b = 0; }
@@ -13,7 +13,7 @@ function hslToRgb(h, s, l) {
     return { r, g, b };
 }
 
-function getSafeSpawnPoint(players, SPAWN_BUFFER) {
+export function getSafeSpawnPoint(players, SPAWN_BUFFER) {
     let spawnPoint = null;
     let isSafe = false;
     let attempts = 0;
@@ -32,8 +32,3 @@ function getSafeSpawnPoint(players, SPAWN_BUFFER) {
     }
     return spawnPoint;
 }
-
-module.exports = {
-    hslToRgb,
-    getSafeSpawnPoint
-};

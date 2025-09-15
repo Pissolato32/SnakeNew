@@ -1,174 +1,141 @@
-const Constants = require('./Constants');
+import { worldSize, FOOD_COLLISION_BUFFER, SNAKE_SEGMENT_RADIUS, MAX_PLAYER_RADIUS, RADIUS_GAIN_FACTOR, HEAD_ON_COLLISION_ANGLE_THRESHOLD } from './Constants.js';
 
 class CollisionSystem {
-    constructor(playerManager, foodManager, powerupManager) {
+    constructor(playerManager, foodManager, powerupManager, logger) {
         this.playerManager = playerManager;
         this.foodManager = foodManager;
         this.powerupManager = powerupManager;
+        this.logger = logger;
     }
 
-    /**
-     * Estimates a player's head position at a given timestamp using their head history.
-     * @param {object} player The player object.
-     * @param {number} timestamp The timestamp to rewind to.
-     * @returns {{x: number, y: number}} The estimated historical position.
-     */
-    getHistoricalPosition(player, timestamp) {
-        const history = player.headHistory;
-        if (history.length === 0) {
-            return { x: player.x, y: player.y }; // No history, return current position
+    _checkWorldBoundaryCollision(player, playersToKill) {
+        if (Math.hypot(player.x, player.y) > worldSize / 2 - player.radius) {
+            playersToKill.add(player);
+            return true;
         }
-
-        // Find the two history points that bracket the timestamp
-        let p1 = null; // Point before or at timestamp
-        let p2 = null; // Point after timestamp
-
-        for (let i = 0; i < history.length; i++) {
-            const point = history.get(i);
-            if (point.timestamp <= timestamp) {
-                p1 = point;
-            } else {
-                p2 = point;
-                break;
+        for (let i = 0; i < player.body.length; i++) {
+            const segment = player.body.get(i);
+            if (!segment) continue;
+            if (Math.hypot(segment.x, segment.y) > worldSize / 2) {
+                this.logger.debug(`Player ${player.id} body segment ${i} out of bounds, killing player.`);
+                playersToKill.add(player);
+                return true;
             }
         }
+        return false;
+    }
 
-        if (!p1) {
-            // All points are after timestamp, use the oldest point (end of history)
-            return history.get(history.length - 1);
-        }
-        if (!p2) {
-            // All points are before or at timestamp, use the newest point (start of history)
-            return p1;
-        }
+    _checkPowerupCollision(player) {
+        this.powerupManager.getPowerups().forEach(p => {
+            if (Math.hypot(player.x - p.x, player.y - p.y) < player.radius + p.radius) {
+                if (p.type === 'FOOD_MAGNET') {
+                    player.powerups.foodMagnet = { attractOnce: true };
+                }
+                this.powerupManager.removePowerup(p);
+            }
+        });
+    }
 
-        // Interpolate between p1 and p2
-        const t = (timestamp - p1.timestamp) / (p2.timestamp - p1.timestamp);
-        const x = p1.x + (p2.x - p1.x) * t;
-        const y = p1.y + (p2.y - p1.y) * t;
-        return { x, y };
+    _checkFoodCollision(player, foodToRemove) {
+        if (player.isDead) return;
+
+        const nearbyFood = this.foodManager.foodSpatialHashing.query({
+            x: player.x - player.radius - FOOD_COLLISION_BUFFER,
+            y: player.y - player.radius - FOOD_COLLISION_BUFFER,
+            width: (player.radius + FOOD_COLLISION_BUFFER) * 2,
+            height: (player.radius + FOOD_COLLISION_BUFFER) * 2
+        });
+
+        this.logger.debug(`Player ${player.id} - Pos: (${player.x.toFixed(2)}, ${player.y.toFixed(2)}), Radius: ${player.radius.toFixed(2)}`);
+        this.logger.debug(`Nearby food count: ${nearbyFood.length}`);
+
+        let totalScore = 0;
+        nearbyFood.forEach(f => {
+            const distance = Math.hypot(player.x - f.x, player.y - f.y);
+            const radiiSum = player.radius + f.radius;
+            const collisionDetected = distance < radiiSum + FOOD_COLLISION_BUFFER;
+
+            this.logger.debug(`  Food ${f.id} - Pos: (${f.x.toFixed(2)}, ${f.y.toFixed(2)}), Radius: ${f.radius.toFixed(2)}`);
+            this.logger.debug(`  Distance: ${distance.toFixed(2)}, Radii Sum: ${radiiSum.toFixed(2)}, Collision: ${collisionDetected}`);
+
+            if (foodToRemove.has(f)) {
+                this.logger.debug(`  Food ${f.id} already marked for removal.`);
+                return;
+            }
+            if (collisionDetected) {
+                this.logger.debug(`  COLLISION DETECTED! Player ${player.id} with Food ${f.id}`);
+                totalScore += f.score;
+                this.logger.debug(`Removing food item: ${f.id}`);
+                foodToRemove.add(f);
+            }
+        });
+
+        if (totalScore > 0) {
+            player.maxLength += totalScore;
+            player.radius = Math.min(MAX_PLAYER_RADIUS, player.radius + totalScore * RADIUS_GAIN_FACTOR);
+            this.logger.debug(`  Player stats updated. New length: ${player.maxLength}, radius: ${player.radius.toFixed(2)}`);
+        }
+    }
+
+    _checkPlayerCollision(player, otherPlayer, playersToKill) {
+        if (player.id === otherPlayer.id) return;
+
+        this.logger.debug(`  Checking collision between Player ${player.id} and OtherPlayer ${otherPlayer.id}`);
+
+        for (let i = 0; i < otherPlayer.body.length; i++) {
+            const segment = otherPlayer.body.get(i);
+            if (otherPlayer.isDead) {
+                this.logger.debug(`    Skipping collision with dead player ${otherPlayer.id}`);
+                continue;
+            }
+
+            const radiiSum = (i === 0) ? (player.radius + otherPlayer.radius) : (player.radius + SNAKE_SEGMENT_RADIUS);
+            const distanceHeadToSegment = Math.hypot(player.x - segment.x, player.y - segment.y);
+            const part = (i === 0) ? 'Head' : `Body Segment ${i}`;
+            this.logger.debug(`    Head-to-${part}: Player ${player.id} Head (${player.x.toFixed(2)}, ${player.y.toFixed(2)}) vs OtherPlayer ${otherPlayer.id} ${part} (${segment.x.toFixed(2)}, ${segment.y.toFixed(2)})`);
+            this.logger.debug(`    Distance: ${distanceHeadToSegment.toFixed(2)}, Radii Sum: ${radiiSum.toFixed(2)}`);
+
+            if (distanceHeadToSegment < radiiSum) {
+                this.logger.debug(`    COLLISION! Head-to-${part}: Player ${player.id} with OtherPlayer ${otherPlayer.id}`);
+                if (i === 0) { // Head-to-head
+                    const angleToOther = Math.atan2(otherPlayer.y - player.y, otherPlayer.x - player.x);
+                    const angleDiff = ((angleToOther - player.angle + Math.PI) % (2 * Math.PI)) - Math.PI;
+                    if (Math.abs(angleDiff) < HEAD_ON_COLLISION_ANGLE_THRESHOLD) {
+                        if (player.maxLength > otherPlayer.maxLength) {
+                            playersToKill.add(otherPlayer);
+                        } else if (otherPlayer.maxLength > player.maxLength) {
+                            playersToKill.add(player);
+                        } else {
+                            playersToKill.add(player);
+                            playersToKill.add(otherPlayer);
+                        }
+                    }
+                } else { // Head-to-body
+                    playersToKill.add(player);
+                }
+                return; // Exit inner loop once collision is detected
+            }
+        }
     }
 
     processCollisions() {
         const playersToKill = new Set();
         const foodToRemove = new Set();
-
         const players = this.playerManager.getPlayers();
+        const playerList = Object.values(players);
 
-        for (const id in players) {
-            const player = players[id];
+        for (const player of playerList) {
+            if (this._checkWorldBoundaryCollision(player, playersToKill)) continue;
+            this._checkPowerupCollision(player);
+            this._checkFoodCollision(player, foodToRemove);
 
-            // World boundary collision
-            if (Math.hypot(player.x, player.y) > Constants.worldSize / 2 - player.radius) {
-                playersToKill.add(player);
-                continue;
+            for (const otherPlayer of playerList) {
+                this._checkPlayerCollision(player, otherPlayer, playersToKill);
             }
-
-            // Powerup collisions
-            this.powerupManager.getPowerups().forEach(p => {
-                if (Math.hypot(player.x - p.x, player.y - p.y) < player.radius + p.radius) {
-                    if (p.type === 'FOOD_MAGNET') {
-                        player.powerups.foodMagnet = { active: true, endTime: Date.now() + 5000 };
-                    }
-                    this.powerupManager.removePowerup(p);
-                }
-            });
-
-            // Food collisions
-            const foodQueryRange = { x: player.x - Constants.AI_VISION_RANGE_WIDTH / 2, y: player.y - Constants.AI_VISION_RANGE_WIDTH / 2, width: Constants.AI_VISION_RANGE_WIDTH, height: Constants.AI_VISION_RANGE_WIDTH };
-            const nearbyFood = this.foodManager.foodSpatialHashing.query(foodQueryRange);
-
-            if (Constants.DEBUG_MODE && !player.isBot) {
-                console.log(`Player ${player.id} - Pos: (${player.x.toFixed(2)}, ${player.y.toFixed(2)}), Radius: ${player.radius.toFixed(2)}`);
-                console.log(`Nearby food count: ${nearbyFood.length}`);
-            }
-
-            nearbyFood.forEach(f => {
-                const distance = Math.hypot(player.x - f.x, player.y - f.y);
-                const radiiSum = player.radius + f.radius;
-                const collisionDetected = distance < radiiSum;
-
-                if (Constants.DEBUG_MODE && !player.isBot) {
-                    console.log(`  Food ${f.id} - Pos: (${f.x.toFixed(2)}, ${f.y.toFixed(2)}), Radius: ${f.radius.toFixed(2)}`);
-                    console.log(`  Distance: ${distance.toFixed(2)}, Radii Sum: ${radiiSum.toFixed(2)}, Collision: ${collisionDetected}`);
-                }
-
-                if (foodToRemove.has(f)) {
-                    if (Constants.DEBUG_MODE && !player.isBot) {
-                        console.log(`  Food ${f.id} already marked for removal.`);
-                    }
-                    return;
-                }
-                if (collisionDetected) {
-                    if (Constants.DEBUG_MODE && !player.isBot) {
-                        console.log(`  COLLISION! Player ${player.id} with Food ${f.id}`);
-                    }
-                    player.maxLength += f.score;
-                    player.radius = Math.min(100, player.radius + f.score * 0.02);
-                    const blendFactor = Math.min(1, 0.03 * f.score);
-                    player.rgb.r = Math.round(player.rgb.r * (1 - blendFactor) + f.rgb.r * blendFactor);
-                    player.rgb.g = Math.round(player.rgb.g * (1 - blendFactor) + f.rgb.g * blendFactor);
-                    player.rgb.b = Math.round(player.rgb.b * (1 - blendFactor) + f.rgb.b * blendFactor);
-                    player.color = `rgb(${player.rgb.r}, ${player.rgb.g}, ${player.rgb.b})`;
-                    foodToRemove.add(f);
-                    if (Constants.DEBUG_MODE && !player.isBot) {
-                        console.log(`  Food ${f.id} added to foodToRemove. New player length: ${player.maxLength}, radius: ${player.radius.toFixed(2)}`);
-                    }
-                }
-            });
-
-            // Player-to-player collisions (head-to-body) with Lag Compensation
-            const playerQueryRange = { x: player.x - player.radius, y: player.y - player.radius, width: player.radius * 2, height: player.radius * 2 };
-            const nearbyPlayers = this.playerManager.playerSpatialHashing.query(playerQueryRange);
-
-            nearbyPlayers.forEach(otherPlayer => {
-                if (player.id === otherPlayer.id) return;
-
-                if (Constants.DEBUG_MODE) {
-                    console.log(`  Checking collision between Player ${player.id} and OtherPlayer ${otherPlayer.id}`);
-                }
-
-                // Calculate rewind time for otherPlayer based on current player's ping
-                const rewindTime = Date.now() - player.ping; 
-                const historicalHeadOtherPlayer = this.getHistoricalPosition(otherPlayer, rewindTime);
-
-                // Explicit Head-to-Head Collision Check
-                const distanceHeads = Math.hypot(player.x - historicalHeadOtherPlayer.x, player.y - historicalHeadOtherPlayer.y);
-                if (Constants.DEBUG_MODE) {
-                    console.log(`    Head-to-Head: Player ${player.id} Head (${player.x.toFixed(2)}, ${player.y.toFixed(2)}) vs OtherPlayer ${otherPlayer.id} Historical Head (${historicalHeadOtherPlayer.x.toFixed(2)}, ${historicalHeadOtherPlayer.y.toFixed(2)})`);
-                    console.log(`    Distance Heads: ${distanceHeads.toFixed(2)}, Radii Sum: ${(player.radius + otherPlayer.radius).toFixed(2)}`);
-                }
-                if (distanceHeads < player.radius + otherPlayer.radius) {
-                    if (Constants.DEBUG_MODE) {
-                        console.log(`    COLLISION! Head-to-Head: Player ${player.id} with OtherPlayer ${otherPlayer.id}`);
-                    }
-                    playersToKill.add(player);
-                    return; // Collision detected, no need to check body
-                }
-
-                // Head-to-body collision check (using current body position, not historical)
-                for (let i = 1; i < otherPlayer.body.length; i++) {
-                    const segment = otherPlayer.body.get(i);
-
-                    // Check collision of current player's head with the other player's current body segment
-                    const distanceHeadToSegment = Math.hypot(player.x - segment.x, player.y - segment.y);
-                    if (Constants.DEBUG_MODE) {
-                        console.log(`    Head-to-Body: Player ${player.id} Head (${player.x.toFixed(2)}, ${player.y.toFixed(2)}) vs OtherPlayer ${otherPlayer.id} Segment ${i} (${segment.x.toFixed(2)}, ${segment.y.toFixed(2)})`);
-                        console.log(`    Distance Head-to-Segment: ${distanceHeadToSegment.toFixed(2)}, Radii Sum: ${(player.radius + Constants.SNAKE_SEGMENT_RADIUS).toFixed(2)}`);
-                    }
-                    if (distanceHeadToSegment < player.radius + Constants.SNAKE_SEGMENT_RADIUS) {
-                        if (Constants.DEBUG_MODE) {
-                            console.log(`    COLLISION! Head-to-Body: Player ${player.id} with OtherPlayer ${otherPlayer.id} body segment ${i}`);
-                        }
-                        playersToKill.add(player);
-                        return; // Exit inner loop once collision is detected
-                    }
-                }
-            });
         }
 
-        // Apply removals and kills after all collisions are processed
         if (foodToRemove.size > 0) {
+            this.logger.debug(`Processing ${foodToRemove.size} food items for removal.`);
             foodToRemove.forEach(f => this.foodManager.removeFood(f));
         }
 
@@ -176,4 +143,4 @@ class CollisionSystem {
     }
 }
 
-module.exports = CollisionSystem;
+export default CollisionSystem;

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slither.io Clone</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="loginScreen">
+        <div class="login-box">
+            <h1>Slither.io</h1>
+            <input type="text" id="nicknameInput" placeholder="Enter your nickname">
+            <button id="playButton">Play</button>
+        </div>
+    </div>
+
+    <canvas id="backgroundCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="gameUI">
+        <div id="leaderboard">
+            <h2>Leaderboard</h2>
+            <ol id="leaderboardList">
+                <!-- Dummy Data -->
+                <li><span>Player 1</span><span>1500</span></li>
+                <li><span>Bot_Killer</span><span>1245</span></li>
+                <li><span>Food_Lover</span><span>980</span></li>
+            </ol>
+        </div>
+        <div id="score">
+            <span>Length:</span>
+            <span id="scoreValue">0</span>
+        </div>
+    </div>
+
+    <div id="deathScreen">
+        <div class="death-box">
+            <h1>You Died!</h1>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button id="playAgainButton">Play Again</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <div class="profiler-container">
+        <div class="profiler-header">
+            <h2>Performance Profiler</h2>
+            <button class="close-button">X</button>
+        </div>
+        <div class="profiler-metrics">
+            <div class="metric-item">
+                <span class="metric-label">FPS:</span>
+                <span class="metric-value" id="fpsValue">--</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Frame Time (ms):</span>
+                <span class="metric-value" id="frameTimeValue">--</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Update Time (ms):</span>
+                <span class="metric-value" id="updateTimeValue">--</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Render Time (ms):</span>
+                <span class="metric-value" id="renderTimeValue">--</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Network Latency (ms):</span>
+                <span class="metric-value" id="networkLatencyValue">--</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Memory Usage (MB):</span>
+                <span class="metric-value" id="memoryUsageValue">--</span>
+            </div>
+        </div>
+        <div class="profiler-metrics game-debug-info">
+            <div class="metric-item"><span class="metric-label">X:</span><span class="metric-value" id="debugX">--</span></div>
+            <div class="metric-item"><span class="metric-label">Y:</span><span class="metric-value" id="debugY">--</span></div>
+            <div class="metric-item"><span class="metric-label">Max Speed:</span><span class="metric-value" id="debugMaxSpeed">--</span></div>
+            <div class="metric-item"><span class="metric-label">Min Speed:</span><span class="metric-value" id="debugMinSpeed">--</span></div>
+            <div class="metric-item"><span class="metric-label">Base Speed:</span><span class="metric-value" id="debugBaseSpeed">--</span></div>
+            <div class="metric-item"><span class="metric-label">Current Speed:</span><span class="metric-value" id="debugCurrentSpeed">--</span></div>
+            <div class="metric-item"><span class="metric-label">Turn Rate:</span><span class="metric-value" id="debugTurnRate">--</span></div>
+            <div class="metric-item"><span class="metric-label">Angle:</span><span class="metric-value" id="debugAngle">--</span></div>
+            <div class="metric-item"><span class="metric-label">Size (Score):</span><span class="metric-value" id="debugSize">--</span></div>
+            <div class="metric-item"><span class="metric-label">Radius:</span><span class="metric-value" id="debugRadius">--</span></div>
+            <div class="metric-item"><span class="metric-label">RGB:</span><span class="metric-value" id="debugRGB">--</span></div>
+            <div class="metric-item"><span class="metric-label">Boosting:</span><span class="metric-value" id="debugBoosting">--</span></div>
+            <div class="metric-item"><span class="metric-label">Bot Count:</span><span class="metric-value" id="debugBotCount">--</span></div>
+            <div class="metric-item"><span class="metric-label">Ping:</span><span class="metric-value" id="debugPing">--</span></div>
+        </div>
+        <canvas id="profilerChart" width="400" height="100"></canvas>
+    </div>
+
+    <script type="module" src="game.js"></script>
+    <script src="profiler.js"></script>
+</body>
+</html>

@@ -1,11 +1,12 @@
-const { POWERUP_TYPES } = require('./Constants');
-const { getSafeSpawnPoint } = require('./Utils');
+import { POWERUP_TYPES } from './Constants.js';
+import { getSafeSpawnPoint } from './Utils.js';
 
 class PowerupManager {
-    constructor(playerManager) { // Needs playerManager to get players for safe spawn point
+    constructor(playerManager, logger) { // Needs playerManager to get players for safe spawn point
         this.powerups = [];
         this.powerupPool = []; // Add powerup pool
         this.playerManager = playerManager; // Store playerManager reference
+        this.logger = logger;
     }
 
     createPowerup() {
@@ -45,4 +46,4 @@ class PowerupManager {
     }
 }
 
-module.exports = PowerupManager;
+export default PowerupManager;

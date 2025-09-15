@@ -109,7 +109,7 @@ class Condition extends Node {
     }
 }
 
-module.exports = {
+export {
     NodeState,
     Sequence,
     Selector,
