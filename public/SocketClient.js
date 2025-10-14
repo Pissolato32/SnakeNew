@@ -7,10 +7,26 @@ class SocketClient {
     }
 
     connect() {
-        this.socket = io();
+        if (typeof window === 'undefined') return;
+        if (typeof window.io !== 'function') {
+            console.error('Socket.IO client não carregado. Verifique a tag de script da CDN.');
+            return;
+        }
+        try {
+            // Se front e servidor estiverem no mesmo domínio (Render), uma chamada sem URL usa o host atual
+            this.socket = window.io({
+                transports: ['websocket'],
+                path: '/socket.io'
+            });
+        } catch (e) {
+            console.error('Falha ao inicializar Socket.IO:', e);
+            return;
+        }
+
         this.setupSocketListeners();
-        
+
         setInterval(() => {
+            if (!this.socket) return;
             this.lastPingTime = Date.now();
             this.socket.emit('ping');
         }, 2000);
