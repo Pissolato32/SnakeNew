@@ -1,32 +1,152 @@
-const path = require('path');
+import {
+    BOT_NAMES,
+    SPAWN_BUFFER,
+    BOT_BOUNDARY_BUFFER,
+    gridCellSize,
+    GAME_TICK_RATE_MS,
+    POWERUP_SPAWN_INTERVAL_MS,
+    MIN_POWERUPS,
+    FOOD_MAGNET_RADIUS,
+    FOOD_MAGNET_FORCE,
+    BASE_SPEED_MIN,
+    BASE_SPEED_MAX_INITIAL,
+    LENGTH_DIVISOR_SPEED,
+    TURN_RATE_MIN,
+    TURN_RATE_MAX_INITIAL,
+    LENGTH_DIVISOR_TURN_RATE,
+    BOOST_SPEED_MULTIPLIER,
+    BOOST_LENGTH_CONSUMPTION_RATE,
+    BOOST_FOOD_DROP_PROBABILITY,
+    BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP,
+    BOT_MANAGEMENT_INTERVAL_MS,
+    MIN_BOT_COUNT,
+    BOT_COUNT_HUMAN_MULTIPLIER,
+    BOT_SCORE_DIFFERENCE_FACTOR,
+    BOT_SCORE_DIFFERENCE_BONUS,
+    SNAKE_SEGMENT_RADIUS,
+    AI_VISION_RANGE_DIMENSION,
+    AI_VISION_RANGE_WIDTH,
+    AI_THREAT_SIZE_RATIO,
+    AI_FLEE_THRESHOLD_BASE,
+    AI_FLEE_THRESHOLD_INCREASED,
+    AI_FLEE_THRESHOLD_SIZE_RATIO,
+    AI_ATTACK_THRESHOLD,
+    AI_ATTACK_SIZE_ADVANTAGE,
+    AI_SENSOR_LENGTH_MULTIPLIER,
+    AI_GOAL_VECTOR_WEIGHT,
+    AI_AVOIDANCE_VECTOR_WEIGHT,
+    AI_STEERING_MAGNITUDE_THRESHOLD,
+    BASE_FOOD_TYPES,
+    BASE_POWERUP_TYPES
+} from '../src/shared/Constants.js';
 
-// Load environment variables if dotenv is available
-try {
-    require('dotenv').config();
-} catch (e) {
-    // dotenv not installed, use process.env directly
-}
+// Note: To use environment variables, you would run your app like:
+// NODE_ENV=development node server.js
+// You can install `dotenv` and uncomment the following lines to use a .env file
+// import dotenv from 'dotenv';
+// dotenv.config();
 
 const config = {
-    PORT: process.env.PORT || 3000,
+    PORT: process.env.PORT || 3002,
     DEBUG_MODE: process.env.DEBUG_MODE === 'true' || false,
-    BOT_COUNT: parseInt(process.env.BOT_COUNT) || 10,
-    WORLD_SIZE: parseInt(process.env.WORLD_SIZE) || 30000,
-    MAX_PLAYERS: parseInt(process.env.MAX_PLAYERS) || 100,
-    // Add more config as needed
+    BOT_COUNT: parseInt(process.env.BOT_COUNT, 10) || 10,
+    WORLD_SIZE: parseInt(process.env.WORLD_SIZE, 10) || 30000,
+    MAX_PLAYERS: parseInt(process.env.MAX_PLAYERS, 10) || 100,
+    game: {
+        BOT_NAMES,
+        SPAWN_BUFFER,
+        BOT_BOUNDARY_BUFFER,
+        FOOD_TYPES: [
+            ...BASE_FOOD_TYPES,
+            { radius: 12, score: 5, color: '#FF1493', glow: true, effect: 'speed_boost' },
+            { radius: 14, score: 6, color: '#00FFFF', glow: true, effect: 'shield' },
+            { radius: 15, score: 25, color: '#FFFFFF', glow: true, movement: 'butterfly' }
+        ],
+        POWERUP_TYPES: [
+            ...BASE_POWERUP_TYPES,
+            { type: 'SPEED_BOOST', color: '#FF4500', radius: 15, duration: 10000 },
+            { type: 'SHIELD', color: '#00CED1', radius: 18, duration: 15000 }
+        ],
+        gridCellSize,
+        GAME_TICK_RATE_MS,
+        NETWORK_UPDATE_RATE_MS: 1000 / 120, // Server-specific - 120 FPS
+        POWERUP_SPAWN_INTERVAL_MS,
+        MIN_POWERUPS,
+        FOOD_PER_PLAYER: 600, // Server-specific
+        FOOD_MAGNET_RADIUS,
+        FOOD_MAGNET_FORCE,
+        BASE_SPEED_MIN,
+        BASE_SPEED_MAX_INITIAL,
+        LENGTH_DIVISOR_SPEED,
+        TURN_RATE_MIN,
+        TURN_RATE_MAX_INITIAL,
+        LENGTH_DIVISOR_TURN_RATE,
+        BOOST_SPEED_MULTIPLIER,
+        BOOST_LENGTH_CONSUMPTION_RATE,
+        BOOST_LENGTH_CONSUMED_PER_DROP: 2.0, // Server-specific
+        BOOST_FOOD_DROP_PROBABILITY,
+        BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP,
+        BOOST_FOOD_DROP_INTERVAL: 20, // Server-specific
+        BOT_MANAGEMENT_INTERVAL_MS,
+        MIN_BOT_COUNT,
+        BOT_COUNT_HUMAN_MULTIPLIER,
+        BOT_SCORE_DIFFERENCE_FACTOR,
+        BOT_SCORE_DIFFERENCE_BONUS,
+        SNAKE_SEGMENT_RADIUS,
+        FOOD_COLLISION_BUFFER: 0, // Server-specific
+        AI_VISION_RANGE_DIMENSION,
+        AI_VISION_RANGE_WIDTH,
+        AI_THREAT_SIZE_RATIO,
+        AI_FLEE_THRESHOLD_BASE,
+        AI_FLEE_THRESHOLD_INCREASED,
+        AI_FLEE_THRESHOLD_SIZE_RATIO,
+        AI_ATTACK_THRESHOLD,
+        AI_ATTACK_SIZE_ADVANTAGE,
+        AI_SENSOR_LENGTH_MULTIPLIER,
+        AI_GOAL_VECTOR_WEIGHT,
+        AI_AVOIDANCE_VECTOR_WEIGHT,
+        AI_STEERING_MAGNITUDE_THRESHOLD,
+        PLAYER_SPATIAL_HASH_CELL_SIZE: 40,
+        DEFAULT_PLAYER_COLORS: ['#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#A133FF', '#33FFF3'],
+        SNAKE_BODY_BUFFER_SIZE: 100,
+        SNAKE_HEAD_HISTORY_SIZE: 30,
+        INITIAL_SNAKE_LENGTH: 30,
+        INITIAL_SNAKE_RADIUS: 12,
+        INITIAL_SNAKE_TURN_RATE: 0.1,
+        INITIAL_SNAKE_SPEED: 4,
+        DEATH_FOOD_DROP_STEP: 3,
+        DEATH_FOOD_DROP_OFFSET: 15,
+        DEATH_FOOD_TYPE_INDEX: 3,
+        DEATH_FOOD_COLOR: '#FFD700',
+        DEATH_FOOD_RGB: { r: 255, g: 215, b: 0 },
+        FOOD_SPATIAL_HASH_CELL_SIZE: 200,
+        POWERUP_SPATIAL_HASH_CELL_SIZE: 200,
+        BUTTERFLY_SPAWN_CHANCE: 0.01,
+        BUTTERFLY_FOOD_TYPE_INDEX: 6,
+        FOOD_EXPIRATION_TIME_MS: 30000,
+        FOOD_DANCE_RADIUS: 2.5,
+        FOOD_DANCE_SPEED: 0.5,
+        FOOD_BOUNDARY_BUFFER: 20,
+        BUTTERFLY_SPEED_MULTIPLIER: 5,
+        BUTTERFLY_DIRECTION_CHANGE_CHANCE: 0.05,
+        BUTTERFLY_DIRECTION_CHANGE_AMOUNT: 1.5,
+        BUTTERFLY_BOUNDARY_ANGLE_CHANGE: 0.5,
+        BUTTERFLY_BOUNDARY_POSITION_ADJUSTMENT: 5,
+        MAX_PLAYER_RADIUS: 100,
+        RADIUS_GAIN_FACTOR: 0.02,
+        HEAD_ON_COLLISION_ANGLE_THRESHOLD: Math.PI / 2,
+        PLAYER_UPDATE_RATE_LIMIT_FPS: 30,
+        HIGH_PING_THRESHOLD: 100,
+        HIGH_PING_UPDATE_RATE_FPS: 30,
+        LOW_PING_UPDATE_RATE_FPS: 60,
+        DEAD_PLAYER_UPDATE_RATE_FPS: 10,
+        AI_TICK_RATE_DIVISOR: 2,
+        PLAYER_SPEED_INTERPOLATION_FACTOR: 0.1,
+        BOOST_FOOD_DROP_DISTANCE: 10,
+        FOOD_MAGNET_FORCE_MULTIPLIER: 10,
+        DYNAMIC_FOOD_TARGET_BASE: 400,
+        DYNAMIC_FOOD_TARGET_PER_PLAYER: 50
+    }
 };
 
-function loadConfig() {
-    // Could load from file or database
-    return config;
-}
-
-function getConfig(key) {
-    return config[key];
-}
-
-export default {
-    loadConfig,
-    getConfig,
-    config
-};
+export default config;

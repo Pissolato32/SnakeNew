@@ -4,6 +4,7 @@ class InputManager {
         this.mouse = { x: 0, y: 0 };
         this.isBoosting = false;
         this.showDebugPanel = false;
+        this.sequenceNumber = 0;
 
         this.setupListeners();
     }
@@ -27,10 +28,12 @@ class InputManager {
     }
 
     getInput() {
+        this.sequenceNumber++;
         return {
             mouse: this.mouse,
             isBoosting: this.isBoosting,
-            showDebugPanel: this.showDebugPanel
+            showDebugPanel: this.showDebugPanel,
+            seq: this.sequenceNumber
         };
     }
 }

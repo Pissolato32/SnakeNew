@@ -4,15 +4,8 @@ import UIManager from './UIManager.js';
 import SocketClient from './SocketClient.js';
 import Renderer from './Renderer.js';
 import PerformanceMonitor from './PerformanceMonitor.js';
-import {
-    TURN_RATE_MIN,
-    TURN_RATE_MAX_INITIAL,
-    LENGTH_DIVISOR_TURN_RATE,
-    BASE_SPEED_MIN,
-    BASE_SPEED_MAX_INITIAL,
-    LENGTH_DIVISOR_SPEED,
-    BOOST_SPEED_MULTIPLIER
-} from './Constants.client.js';
+
+const INTERPOLATION_BUFFER_MS = 120; // 120ms buffer for interpolation
 
 class GameClient {
     constructor() {
@@ -23,8 +16,10 @@ class GameClient {
         this.inputManager = new InputManager(this.renderer.gameCanvas);
         this.perfMonitor = new PerformanceMonitor();
 
-        this.isDead = false;
+        this.snapshotBuffer = [];
+        this.pendingInputs = [];
         this.gameLoopRunning = false;
+        this.lastTime = 0;
     }
 
     init() {
@@ -44,22 +39,30 @@ class GameClient {
             this.renderer.drawStaticBackground();
         };
 
-        this.socketClient.onGameState = (delta) => {
+        this.socketClient.onSnapshot = (snapshot) => {
             this.perfMonitor.markUpdateStart();
-            this.gameState.processDelta(delta);
+            this.handleSnapshot(snapshot);
             this.perfMonitor.markUpdateEnd();
         };
 
         this.socketClient.onDeath = (data) => {
-            this.isDead = true;
             this.uiManager.showDeathScreen(data.score);
             this.renderer.gameCanvas.style.opacity = '0.3';
-            this.renderer.gameCanvas.style.display = 'none'; // Hide canvas on death
+            this.pendingInputs = []; // Clear pending inputs on death
         };
         
         this.socketClient.onPong = (ping) => {
             this.perfMonitor.updateNetworkLatency(ping);
         };
+    }
+
+    handleSnapshot(snapshot) {
+        snapshot.timestamp = performance.now();
+        this.snapshotBuffer.push(snapshot);
+        if (this.snapshotBuffer.length > 20) {
+            this.snapshotBuffer.shift();
+        }
+        this.reconcile(snapshot);
     }
 
     joinGame() {
@@ -70,7 +73,8 @@ class GameClient {
 
     startGame() {
         this.uiManager.showGameUI();
-        this.isDead = false;
+        this.renderer.gameCanvas.style.display = 'block';
+        this.renderer.gameCanvas.style.opacity = '1';
 
         if (!this.gameLoopRunning) {
             this.gameLoopRunning = true;
@@ -81,15 +85,15 @@ class GameClient {
     gameLoop(timestamp) {
         this.perfMonitor.beginFrame(timestamp);
 
-        this.perfMonitor.markUpdateStart();
-        this.update();
-        this.perfMonitor.markUpdateEnd();
-
-        this.perfMonitor.markRenderStart();
-        this.renderer.draw();
+        this.processInputs();
+        this.renderInterpolatedState();
+        
         this.uiManager.updateScoreAndLeaderboard(this.gameState.players, this.gameState.selfId);
-        this.renderer.updateCamera();
-        this.perfMonitor.markRenderEnd();
+        const input = this.inputManager.getInput();
+        this.uiManager.toggleDebugPanel(input.showDebugPanel);
+        if (input.showDebugPanel) {
+            this.uiManager.updateDebugPanel(this.perfMonitor.getMetrics(), this.gameState);
+        }
 
         this.perfMonitor.endFrame();
 
@@ -98,52 +102,80 @@ class GameClient {
         }
     }
 
-    update() {
-        const self = this.gameState.self;
-        if (!self) return;
+    processInputs() {
+        const self = this.gameState.getPlayer(this.gameState.selfId);
+        if (!self || self.isDead) return;
 
         const input = this.inputManager.getInput();
+        const worldMouseX = (input.mouse.x - this.renderer.gameCanvas.width / 2) / this.renderer.camera.zoom + this.renderer.camera.x;
+        const worldMouseY = (input.mouse.y - this.renderer.gameCanvas.height / 2) / this.renderer.camera.zoom + this.renderer.camera.y;
+        const targetAngle = Math.atan2(worldMouseY - self.y, worldMouseX - self.x);
 
-        if (this.isDead) {
-            this.socketClient.sendPlayerUpdate({ angle: self.angle, isBoosting: false });
+        const inputPayload = { angle: targetAngle, isBoosting: input.isBoosting };
+        const seq = this.socketClient.sendInput(inputPayload);
+        
+        this.pendingInputs.push({ seq, ...inputPayload });
+        
+        // Client-side prediction
+        this.predictMovement(self, inputPayload);
+    }
+    
+    predictMovement(player, input) {
+        // Simplified prediction based on user input
+        player.angle = input.angle;
+        const speed = input.isBoosting ? player.speed * 1.5 : player.speed; // Approximate
+        player.x += Math.cos(player.angle) * speed * (1/60); // Assume 60fps for prediction delta
+        player.y += Math.sin(player.angle) * speed * (1/60);
+    }
+
+    reconcile(snapshot) {
+        const serverState = snapshot.players.find(p => p.id === this.gameState.selfId);
+        const self = this.gameState.getPlayer(this.gameState.selfId);
+
+        if (!self || !serverState) return;
+
+        // Remove acknowledged inputs
+        this.pendingInputs = this.pendingInputs.filter(input => input.seq > serverState.seq);
+
+        // Set authoritative state from server
+        self.x = serverState.x;
+        self.y = serverState.y;
+        self.angle = serverState.angle;
+        self.maxLength = serverState.sc;
+        // ... and other stats
+
+        // Re-apply pending inputs for reconciliation
+        this.pendingInputs.forEach(input => {
+            this.predictMovement(self, input);
+        });
+    }
+
+    renderInterpolatedState() {
+        const renderTimestamp = performance.now() - INTERPOLATION_BUFFER_MS;
+        
+        const snapshotAIndex = this.snapshotBuffer.findIndex((s, i) => 
+            s.timestamp <= renderTimestamp && this.snapshotBuffer[i+1] && this.snapshotBuffer[i+1].timestamp > renderTimestamp
+        );
+
+        if (snapshotAIndex === -1) {
+            // Not enough data to interpolate, just render the latest known state
+            this.renderer.updateCamera();
+            this.renderer.draw();
             return;
         }
 
-        // Client-side prediction
-        const worldMouseX = (input.mouse.x - this.renderer.gameCanvas.width / 2) / this.renderer.camera.zoom + self.x;
-        const worldMouseY = (input.mouse.y - this.renderer.gameCanvas.height / 2) / this.renderer.camera.zoom + self.y;
-        const targetAngle = Math.atan2(worldMouseY - self.y, worldMouseX - self.x);
-        this.socketClient.sendPlayerUpdate({ angle: targetAngle, isBoosting: input.isBoosting });
+        const snapshotA = this.snapshotBuffer[snapshotAIndex];
+        const snapshotB = this.snapshotBuffer[snapshotAIndex + 1];
+        
+        const timeDiff = snapshotB.timestamp - snapshotA.timestamp;
+        const renderDiff = renderTimestamp - snapshotA.timestamp;
+        const t = timeDiff > 0 ? renderDiff / timeDiff : 0;
 
-        const angleDiff = targetAngle - self.angle;
-        self.angle += Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff)) * self.turnRate;
-
-        self.turnRate = Math.max(TURN_RATE_MIN, TURN_RATE_MAX_INITIAL - (self.maxLength / LENGTH_DIVISOR_TURN_RATE) * TURN_RATE_MIN);
-        self.baseSpeed = Math.max(BASE_SPEED_MIN, BASE_SPEED_MAX_INITIAL - (self.maxLength / LENGTH_DIVISOR_SPEED));
-        self.speed = input.isBoosting ? self.baseSpeed * BOOST_SPEED_MULTIPLIER : self.baseSpeed;
-
-        self.x += Math.cos(self.angle) * self.speed;
-        self.y += Math.sin(self.angle) * self.speed;
-
-        self.body.addFirst({ x: self.x, y: self.y });
-        while (self.body.length > self.maxLength) {
-            self.body.removeLast();
-        }
-
-        // Interpolation
-        this.gameState.players.forEach(p => {
-            if (p.targetX) {
-                const factor = (p.id === this.gameState.selfId) ? 0.05 : 0.15;
-                p.x += (p.targetX - p.x) * factor;
-                p.y += (p.targetY - p.y) * factor;
-            }
-        });
-
-        this.renderer.updateParticles();
-        this.uiManager.toggleDebugPanel(input.showDebugPanel);
-        if (input.showDebugPanel) {
-            this.uiManager.updateDebugPanel(this.perfMonitor.getMetrics(), this.gameState);
-        }
+        // Update GameState with all players/entities for rendering
+        this.gameState.updateFromSnapshot(snapshotA, snapshotB, t);
+        
+        this.renderer.updateCamera();
+        this.renderer.draw();
     }
 }
 

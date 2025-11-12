@@ -8,12 +8,8 @@ class Renderer {
         this.backgroundCtx = this.backgroundCanvas.getContext('2d');
         this.gameCanvas = document.getElementById('gameCanvas');
         this.ctx = this.gameCanvas.getContext('2d');
-
-        console.log('Renderer Constructor: gameCanvas =', this.gameCanvas);
-        console.log('Renderer Constructor: gameCanvas.width =', this.gameCanvas.width, 'gameCanvas.height =', this.gameCanvas.height);
-        console.log('Renderer Constructor: gameCanvas.clientWidth =', this.gameCanvas.clientWidth, 'gameCanvas.clientHeight =', this.gameCanvas.clientHeight);
-        console.log('Renderer Constructor: gameCanvas.style.display =', this.gameCanvas.style.display, 'gameCanvas.style.opacity =', this.gameCanvas.style.opacity);
-        console.log('Renderer Constructor: ctx =', this.ctx);
+        this.minimapCanvas = document.getElementById('minimapCanvas');
+        this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
 
         this.camera = { x: 0, y: 0, zoom: 1 };
 
@@ -37,10 +33,13 @@ class Renderer {
         this.gameCanvas.height = window.innerHeight;
         this.backgroundCanvas.width = window.innerWidth;
         this.backgroundCanvas.height = window.innerHeight;
+        
+        if (this.minimapCanvas) {
+            this.minimapCanvas.width = 200;
+            this.minimapCanvas.height = 200;
+        }
+        
         this.drawStaticBackground();
-        console.log('Renderer resizeCanvas: gameCanvas.width =', this.gameCanvas.width, 'gameCanvas.height =', this.gameCanvas.height);
-        console.log('Renderer resizeCanvas: gameCanvas.clientWidth =', this.gameCanvas.clientWidth, 'gameCanvas.clientHeight =', this.gameCanvas.clientHeight);
-        console.log('Renderer resizeCanvas: gameCanvas.style.display =', this.gameCanvas.style.display, 'gameCanvas.style.opacity =', this.gameCanvas.style.opacity);
     }
 
     updateCamera() {
@@ -59,6 +58,7 @@ class Renderer {
         this.ctx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
 
         const self = this.gameState.self;
+        
         if (!self) {
             this.ctx.restore();
             return;
@@ -70,37 +70,57 @@ class Renderer {
 
         this.drawWorld();
 
-        // Culling logic here
+        const halfW = (this.gameCanvas.width / this.camera.zoom) / 2;
+        const halfH = (this.gameCanvas.height / this.camera.zoom) / 2;
+        const left = this.camera.x - halfW * 1.5;
+        const right = this.camera.x + halfW * 1.5;
+        const top = this.camera.y - halfH * 1.5;
+        const bottom = this.camera.y + halfH * 1.5;
+        
+        const inView = (x, y, r = 0) => x + r >= left && x - r <= right && y + r >= top && y - r <= bottom;
 
-        this.gameState.food.forEach(f => this.drawFood(f));
-        this.gameState.powerups.forEach(p => this.drawPowerUp(p));
+        this.gameState.food.forEach(f => {
+            if (inView(f.x, f.y, f.radius)) this.drawFood(f);
+        });
+        this.gameState.powerups.forEach(p => {
+            if (inView(p.x, p.y, p.radius)) this.drawPowerUp(p);
+        });
         this.gameState.players.forEach(p => this.drawSnake(p));
 
         this.drawParticles();
 
         this.ctx.restore();
+        
+        this.drawMinimap();
     }
 
     drawWorld() {
-        const gridSize = 50;
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; // Changed from 0.05 to 0.1 for better visibility
-        this.ctx.lineWidth = 1;
+        const gridSize = 200;
         const halfWorld = this.gameState.worldSize / 2;
+        
+        const halfW = (this.gameCanvas.width / this.camera.zoom) / 2;
+        const halfH = (this.gameCanvas.height / this.camera.zoom) / 2;
+        const left = Math.max(-halfWorld, this.camera.x - halfW - gridSize);
+        const right = Math.min(halfWorld, this.camera.x + halfW + gridSize);
+        const top = Math.max(-halfWorld, this.camera.y - halfH - gridSize);
+        const bottom = Math.min(halfWorld, this.camera.y + halfH + gridSize);
+        
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
 
-        for (let x = -halfWorld; x <= halfWorld; x += gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, -halfWorld);
-            this.ctx.lineTo(x, halfWorld);
-            this.ctx.stroke();
+        for (let x = Math.floor(left / gridSize) * gridSize; x <= right; x += gridSize) {
+            this.ctx.moveTo(x, top);
+            this.ctx.lineTo(x, bottom);
         }
-        for (let y = -halfWorld; y <= halfWorld; y += gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(-halfWorld, y);
-            this.ctx.lineTo(halfWorld, y);
-            this.ctx.stroke();
+        for (let y = Math.floor(top / gridSize) * gridSize; y <= bottom; y += gridSize) {
+            this.ctx.moveTo(left, y);
+            this.ctx.lineTo(right, y);
         }
+        
+        this.ctx.stroke();
 
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // Changed from 0.1 to 0.2 for better visibility
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         this.ctx.lineWidth = 10;
         this.ctx.beginPath();
         this.ctx.arc(0, 0, halfWorld, 0, Math.PI * 2);
@@ -112,43 +132,20 @@ class Renderer {
     }
 
     drawFood(f) {
-        this.ctx.save();
-        const pulse = Math.sin(Date.now() / 200);
-
-        // Ensure fillStyle is set before drawing
         this.ctx.fillStyle = f.color;
-
-        if (f.glow) {
-            this.ctx.shadowColor = f.color;
-            this.ctx.shadowBlur = 10 + pulse * 5;
-        } else {
-            this.ctx.shadowColor = 'rgba(255, 255, 255, 0.7)';
-            this.ctx.shadowBlur = 8 + pulse * 3;
-        }
-
         this.ctx.beginPath();
         this.ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
         this.ctx.fill();
-
-        const gradient = this.ctx.createRadialGradient(f.x - f.radius/2, f.y - f.radius/2, 0, f.x, f.y, f.radius);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-        gradient.addColorStop(1, f.color);
-        this.ctx.fillStyle = gradient;
-        this.ctx.fill();
-
-        this.ctx.restore();
     }
 
     drawPowerUp(p) {
-        this.ctx.save(); // Save context for powerup drawing
+        this.ctx.fillStyle = p.color;
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        this.ctx.fillStyle = p.color;
         this.ctx.fill();
-        this.ctx.strokeStyle = `rgba(255, 255, 255, ${Math.abs(Math.sin(Date.now() / 200))})`;
-        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.lineWidth = 2;
         this.ctx.stroke();
-        this.ctx.restore(); // Restore context after powerup drawing
     }
 
     drawSnake(p) {
@@ -157,95 +154,60 @@ class Renderer {
         }
 
         this.ctx.save();
-
-        if (p.isBoosting) {
-            this.ctx.shadowBlur = 20;
-            this.ctx.shadowColor = 'white';
-        }
-
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
 
-        if (p.skin === 'rainbow') {
-            p.hue = (Date.now() / 10) % 360;
+        if (p.body.length === 0) {
+            this.ctx.restore();
+            return;
         }
 
-        for (let i = p.body.length - 1; i > 0; i--) {
-            const segment = p.body.get(i);
-            if (!segment) continue;
-
-            const radius = Math.max(2, p.radius * (1 - (i / p.body.length) * 0.7));
-            let segmentColor;
-            let borderColor;
-
-            switch (p.skin) {
-                case 'rainbow':
-                    segmentColor = `hsl(${(p.hue + i * 5) % 360}, 100%, 70%)`;
-                    borderColor = `hsl(${(p.hue + i * 5) % 360}, 100%, 50%)`;
-                    break;
-                case 'galaxy':
-                    segmentColor = '#191970';
-                    borderColor = '#000033';
-                    break;
-                case 'neon':
-                default:
-                    segmentColor = p.color;
-                    borderColor = this.adjustColorBrightness(p.color, -30);
-            }
-
-            if (p.skin === 'neon' || p.skin === 'galaxy') {
-                this.ctx.fillStyle = p.skin === 'neon' ? p.color : 'rgba(255, 255, 255, 0.5)';
-                this.ctx.globalAlpha = 0.15;
-                this.ctx.beginPath();
-                this.ctx.arc(segment.x, segment.y, radius + 4, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.globalAlpha = 1;
-            }
-
-            this.ctx.fillStyle = borderColor;
-            this.ctx.beginPath();
-            this.ctx.arc(segment.x, segment.y, radius + 1, 0, Math.PI * 2);
-            this.ctx.fill();
-
-            this.ctx.fillStyle = segmentColor;
-            this.ctx.beginPath();
-            this.ctx.arc(segment.x, segment.y, radius, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            if (p.skin === 'galaxy' && i % 7 === 0) {
-                this.ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + Math.random() * 0.5})`;
-                this.ctx.beginPath();
-                this.ctx.arc(segment.x + (Math.random() - 0.5) * radius, segment.y + (Math.random() - 0.5) * radius, Math.random() * 1.2, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-        }
-        
         const head = p.body.get(0);
         if (!head) {
             this.ctx.restore();
             return;
         }
 
-        let headColor = p.color;
-        let headBorderColor = this.adjustColorBrightness(p.color, -30);
+        let baseColor = p.color;
+        let borderColor = this.adjustColorBrightness(p.color, -30);
 
-        switch (p.skin) {
-            case 'rainbow':
-                headColor = `hsl(${p.hue}, 100%, 70%)`;
-                headBorderColor = `hsl(${p.hue}, 100%, 50%)`;
-                break;
-            case 'galaxy':
-                headColor = '#191970';
-                headBorderColor = '#000033';
-                break;
+        if (p.skin === 'rainbow') {
+            p.hue = (Date.now() / 10) % 360;
+            baseColor = `hsl(${p.hue}, 100%, 70%)`;
+            borderColor = `hsl(${p.hue}, 100%, 50%)`;
+        } else if (p.skin === 'galaxy') {
+            baseColor = '#191970';
+            borderColor = '#000033';
         }
 
-        this.ctx.fillStyle = headBorderColor;
+        // Draw snake body
+        this.ctx.strokeStyle = borderColor;
+        this.ctx.lineWidth = p.radius * 2 + 2; // Border width
+        this.ctx.beginPath();
+        this.ctx.moveTo(p.body.get(0).x, p.body.get(0).y);
+        for (let i = 1; i < p.body.length; i++) {
+            const segment = p.body.get(i);
+            this.ctx.lineTo(segment.x, segment.y);
+        }
+        this.ctx.stroke();
+
+        this.ctx.strokeStyle = baseColor;
+        this.ctx.lineWidth = p.radius * 2; // Inner snake width
+        this.ctx.beginPath();
+        this.ctx.moveTo(p.body.get(0).x, p.body.get(0).y);
+        for (let i = 1; i < p.body.length; i++) {
+            const segment = p.body.get(i);
+            this.ctx.lineTo(segment.x, segment.y);
+        }
+        this.ctx.stroke();
+
+        // Draw head
+        this.ctx.fillStyle = borderColor;
         this.ctx.beginPath();
         this.ctx.arc(head.x, head.y, p.radius + 1, 0, Math.PI * 2);
         this.ctx.fill();
 
-        this.ctx.fillStyle = headColor;
+        this.ctx.fillStyle = baseColor;
         this.ctx.beginPath();
         this.ctx.arc(head.x, head.y, p.radius, 0, Math.PI * 2);
         this.ctx.fill();
@@ -300,7 +262,7 @@ class Renderer {
         g = g > 255 ? 255 : g < 0 ? 0 : g;
         b = b > 255 ? 255 : b < 0 ? 0 : b;
 
-        return (usePound ? '#' : '') + (r << 16 | g << 8 | b).toString(16);
+        return (usePound ? '#' : '') + (r << 16 | g << 8 | b).toString(16).padStart(6, '0');
     }
 
     updateParticles() {
@@ -327,6 +289,61 @@ class Renderer {
             this.ctx.fill();
             this.ctx.restore();
         }
+    }
+
+    drawMinimap() {
+        if (!this.minimapCtx) return;
+
+        const size = 200;
+        const halfWorld = this.gameState.worldSize / 2;
+        const scale = size / this.gameState.worldSize;
+        const center = size / 2;
+        const radius = size / 2;
+
+        this.minimapCtx.clearRect(0, 0, size, size);
+
+        this.minimapCtx.save();
+        this.minimapCtx.beginPath();
+        this.minimapCtx.arc(center, center, radius, 0, Math.PI * 2);
+        this.minimapCtx.clip();
+
+        this.minimapCtx.fillStyle = '#000000';
+        this.minimapCtx.fillRect(0, 0, size, size);
+
+        // Draw food as simple dots
+        this.gameState.food.forEach(f => {
+            const miniX = ((f.x + halfWorld) * scale);
+            const miniY = ((f.y + halfWorld) * scale);
+            this.minimapCtx.fillStyle = f.color;
+            this.minimapCtx.beginPath();
+            this.minimapCtx.arc(miniX, miniY, 1, 0, Math.PI * 2); // Smaller radius for minimap food
+            this.minimapCtx.fill();
+        });
+
+        this.minimapCtx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+        this.minimapCtx.lineWidth = 3;
+        this.minimapCtx.beginPath();
+        this.minimapCtx.arc(center, center, radius - 2, 0, Math.PI * 2);
+        this.minimapCtx.stroke();
+
+        const self = this.gameState.self;
+        if (self) {
+            const miniX = ((self.x + halfWorld) * scale);
+            const miniY = ((self.y + halfWorld) * scale);
+
+            this.minimapCtx.strokeStyle = '#000';
+            this.minimapCtx.lineWidth = 2;
+            this.minimapCtx.beginPath();
+            this.minimapCtx.arc(miniX, miniY, 5, 0, Math.PI * 2);
+            this.minimapCtx.stroke();
+
+            this.minimapCtx.fillStyle = '#00FF00';
+            this.minimapCtx.beginPath();
+            this.minimapCtx.arc(miniX, miniY, 4, 0, Math.PI * 2);
+            this.minimapCtx.fill();
+        }
+
+        this.minimapCtx.restore();
     }
 }
 

@@ -1,10 +1,12 @@
-export default {
-  transform: {},
-  testEnvironment: 'node',
-  transformIgnorePatterns: [
-    '/node_modules/(?!(your-esm-package)/)'
-  ],
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1'
-  }
+/** @type {import('jest').Config} */
+const config = {
+    // Informa ao Jest para usar o ambiente Node.js
+    testEnvironment: 'node',
+
+    // Permite que o Jest processe módulos ES6
+    transform: {
+        '^.+\\.js$': 'babel-jest',
+    },
 };
+
+module.exports = config;

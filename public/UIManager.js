@@ -18,7 +18,6 @@ class UIManager {
         this.prevColor = document.getElementById('prevColor');
         this.nextColor = document.getElementById('nextColor');
         this.debugPanel = document.getElementById('debug-panel');
-        console.log('UIManager: this.debugPanel =', this.debugPanel);
 
         this.solidColors = UI_SOLID_COLORS;
         this.currentColorIndex = 0;
@@ -31,7 +30,12 @@ class UIManager {
 
     setupListeners() {
         if (this.playButton) {
-            this.playButton.addEventListener('click', () => this.onPlayButtonClick());
+            this.playButton.addEventListener('click', () => {
+                console.log('Play button clicked!');
+                if (this.onPlayButtonClick) {
+                    this.onPlayButtonClick();
+                }
+            });
         }
         if (this.playAgainButton) {
             this.playAgainButton.addEventListener('click', () => this.onPlayAgainButtonClick());
@@ -68,6 +72,14 @@ class UIManager {
         this.loginScreen.style.display = 'none';
         this.deathScreen.style.display = 'none';
         this.gameUI.style.display = 'block';
+        
+        // Show the canvas elements
+        const gameCanvas = document.getElementById('gameCanvas');
+        const backgroundCanvas = document.getElementById('backgroundCanvas');
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        if (gameCanvas) gameCanvas.style.display = 'block';
+        if (backgroundCanvas) backgroundCanvas.style.display = 'block';
+        if (minimapCanvas) minimapCanvas.style.display = 'block';
     }
 
     showDeathScreen(score) {
@@ -110,29 +122,37 @@ class UIManager {
     updateDebugPanel(metrics, gameState) {
         if (!this.debugPanel) return;
 
+        // Helper to safely update text content
+        const updateText = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        };
+
         // Update performance metrics
-        document.getElementById('fpsValue').textContent = metrics.fps.toFixed(2);
-        document.getElementById('frameTimeValue').textContent = metrics.frameTime.toFixed(2);
-        document.getElementById('updateTimeValue').textContent = metrics.updateTime.toFixed(2);
-        document.getElementById('renderTimeValue').textContent = metrics.renderTime.toFixed(2);
-        document.getElementById('networkLatencyValue').textContent = metrics.networkLatency.toFixed(2);
-        document.getElementById('memoryUsageValue').textContent = metrics.memoryUsage.toFixed(2);
+        updateText('fpsValue', metrics.fps.toFixed(2));
+        updateText('frameTimeValue', `${metrics.frameTime.toFixed(2)} ms`);
+        updateText('updateTimeValue', `${metrics.updateTime.toFixed(2)} ms`);
+        updateText('renderTimeValue', `${metrics.renderTime.toFixed(2)} ms`);
+        updateText('networkLatencyValue', `${metrics.networkLatency.toFixed(2)} ms`);
+        updateText('memoryUsageValue', `${metrics.memoryUsage.toFixed(2)} MB`);
 
         // Update player state
         const self = gameState.self;
         if (self) {
-            document.getElementById('debugX').textContent = self.x.toFixed(2);
-            document.getElementById('debugY').textContent = self.y.toFixed(2);
-            document.getElementById('debugCurrentSpeed').textContent = self.speed.toFixed(2);
-            document.getElementById('debugAngle').textContent = self.angle.toFixed(2);
-            document.getElementById('debugSize').textContent = Math.floor(self.maxLength);
-            document.getElementById('debugRadius').textContent = self.radius.toFixed(2);
-            document.getElementById('debugBoosting').textContent = self.isBoosting;
+            updateText('debugX', self.x.toFixed(2));
+            updateText('debugY', self.y.toFixed(2));
+            updateText('debugCurrentSpeed', self.speed.toFixed(2));
+            updateText('debugAngle', self.angle.toFixed(2));
+            updateText('debugSize', Math.floor(self.maxLength));
+            updateText('debugRadius', self.radius.toFixed(2));
+            updateText('debugBoosting', self.isBoosting);
         }
 
         // Update game state
-        document.getElementById('debugBotCount').textContent = Array.from(gameState.players.values()).filter(p => p.isBot).length;
-        document.getElementById('debugPing').textContent = `${metrics.networkLatency.toFixed(0)} ms`;
+        updateText('debugBotCount', Array.from(gameState.players.values()).filter(p => p.isBot).length);
+        updateText('debugPing', `${metrics.networkLatency.toFixed(0)} ms`);
 
         // Update chart
         if (window.updateProfilerChart) {
@@ -142,7 +162,7 @@ class UIManager {
 
     makeDraggable(element) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        const header = element.querySelector(".profiler-header");
+        const header = element.querySelector('.profiler-header');
 
         if (header) {
             header.onmousedown = dragMouseDown;
@@ -166,8 +186,8 @@ class UIManager {
             pos2 = pos4 - e.clientY;
             pos3 = e.clientX;
             pos4 = e.clientY;
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
+            element.style.top = (element.offsetTop - pos2) + 'px';
+            element.style.left = (element.offsetLeft - pos1) + 'px';
         }
 
         function closeDragElement() {

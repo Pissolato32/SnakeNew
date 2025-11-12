@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Slither.io Clone</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
@@ -50,6 +50,8 @@
         </div>
     </div>
 
+    <canvas id="minimapCanvas"></canvas>
+
     <div id="deathScreen">
         <div class="death-box">
             <h1>You Died!</h1>
@@ -59,11 +61,74 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <div id="debug-panel" class="profiler-container">
-        <!-- ... debug panel content ... -->
+    <div id="debug-panel" class="profiler-container" style="display: none;">
+        <div class="profiler-header">
+            <h2>Debug Panel</h2>
+            <button class="close-button">X</button>
+        </div>
+        <div class="profiler-metrics">
+            <div class="metric-group">
+                <h3>Performance</h3>
+                <div class="metric-item"><span>FPS:</span><span id="fpsValue">0</span></div>
+                <div class="metric-item"><span>Frame Time:</span><span id="frameTimeValue">0</span> ms</div>
+                <div class="metric-item"><span>Update Time:</span><span id="updateTimeValue">0</span> ms</div>
+                <div class="metric-item"><span>Render Time:</span><span id="renderTimeValue">0</span> ms</div>
+                <div class="metric-item"><span>Ping:</span><span id="debugPing">0</span></div>
+                <div class="metric-item"><span>Latency:</span><span id="networkLatencyValue">0</span> ms</div>
+                <div class="metric-item"><span>Memory:</span><span id="memoryUsageValue">0</span> MB</div>
+            </div>
+            <div class="metric-group">
+                <h3>Player State</h3>
+                <div class="metric-item"><span>X:</span><span id="debugX">0</span></div>
+                <div class="metric-item"><span>Y:</span><span id="debugY">0</span></div>
+                <div class="metric-item"><span>Speed:</span><span id="debugCurrentSpeed">0</span></div>
+                <div class="metric-item"><span>Angle:</span><span id="debugAngle">0</span></div>
+                <div class="metric-item"><span>Length:</span><span id="debugSize">0</span></div>
+                <div class="metric-item"><span>Radius:</span><span id="debugRadius">0</span></div>
+                <div class="metric-item"><span>Boosting:</span><span id="debugBoosting">false</span></div>
+            </div>
+            <div class="metric-group">
+                <h3>Game State</h3>
+                <div class="metric-item"><span>Bots:</span><span id="debugBotCount">0</span></div>
+            </div>
+            <canvas id="profilerChart"></canvas>
+        </div>
     </div>
 
-    <script type="module" src="game.js"></script>
+    <script type="module" src="game.js?v=2"></script>
     <script src="profiler.js"></script>
+    <script>
+        // Previne o zoom via 'ctrl + scroll'
+        document.body.addEventListener('wheel', function(e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Previne o zoom via atalhos de teclado 'ctrl +', 'ctrl -', 'ctrl 0'
+        document.body.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // Tenta detectar e redefinir o zoom do navegador
+        function preventBrowserZoom() {
+            // A comparação direta pode não ser ideal para todas as precisões de zoom
+            if (Math.abs(window.devicePixelRatio - 1) > 0.02) {
+                document.body.style.transform = 'scale(' + 1 / window.devicePixelRatio + ')';
+                document.body.style.transformOrigin = '0 0';
+            }
+        }
+
+        // Verifica o zoom em intervalos regulares
+        setInterval(preventBrowserZoom, 150);
+
+        // Verifica o zoom em eventos de redimensionamento
+        window.addEventListener('resize', preventBrowserZoom);
+
+        // Executa na inicialização
+        preventBrowserZoom();
+    </script>
 </body>
 </html>

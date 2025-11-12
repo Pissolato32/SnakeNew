@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **Project Structure Reorganization:** Complete restructuring of the codebase for better maintainability and clearer separation of concerns:
+  - Moved all server code to `src/server/`
+  - Moved all client code to `src/client/`
+  - Moved all shared code to `src/shared/`
+  - Updated all import paths across the entire codebase
+  - Updated build scripts and configuration files
+  - Maintained `public/` for static assets only
+
 ### Fixed
 - **Snake Growth:** Snakes now grow visually after eating food. This was fixed by ensuring `maxLength` and `radius` updates are sent from the server to the client.
 - **Collision Detection:** Re-enabled snake-on-snake collision. This was fixed by correcting the `SpatialHashing` grid size to ensure nearby players are correctly identified for collision checks.

@@ -48,4 +48,4 @@ class MetricsCollector {
     }
 }
 
-module.exports = MetricsCollector;
+export default MetricsCollector;

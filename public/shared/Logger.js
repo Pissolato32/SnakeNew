@@ -56,17 +56,3 @@ class Logger {
 
 export default Logger;
 
-// Universal module export for both CommonJS and ES6 environments
-if (typeof module !== 'undefined' && module.exports) {
-    // CommonJS (Node.js server)
-    module.exports = Logger;
-} else if (typeof define === 'function' && define.amd) {
-    // AMD
-    define([], () => Logger);
-} else if (typeof window !== 'undefined') {
-    // Browser global
-    window.Logger = Logger;
-} else if (typeof global !== 'undefined') {
-    // Node.js global
-    global.Logger = Logger;
-}
