@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals';
-import { hslToRgb, getSafeSpawnPoint } from '../src/shared/Utils.js';
+import { hslToRgb } from '../src/shared/Utils.js';
 
 describe('Utils', () => {
     test('hslToRgb converts HSL to RGB correctly for red', () => {

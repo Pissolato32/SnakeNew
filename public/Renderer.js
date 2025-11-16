@@ -1,5 +1,5 @@
 import { CAMERA_ZOOM_FACTOR, CAMERA_ZOOM_MULTIPLIER, CAMERA_ZOOM_SMOOTHING, CAMERA_MOVE_SMOOTHING } from './Constants.client.js';
-import ObjectPool from './ObjectPool.js';
+import ObjectPool from '/shared/ObjectPool.js';
 
 class Renderer {
     constructor(gameState) {
@@ -43,7 +43,7 @@ class Renderer {
     }
 
     updateCamera() {
-        const self = this.gameState.self;
+        const self = this.gameState.getPlayer(this.gameState.selfId);
         if (!self) return;
 
         this.camera.x += (self.x - this.camera.x) * CAMERA_MOVE_SMOOTHING;
@@ -54,10 +54,9 @@ class Renderer {
 
     draw() {
         this.ctx.save();
-        this.ctx.fillStyle = '#121212';
-        this.ctx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+        this.ctx.clearRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
 
-        const self = this.gameState.self;
+        const self = this.gameState.getPlayer(this.gameState.selfId);
         
         if (!self) {
             this.ctx.restore();
@@ -128,7 +127,26 @@ class Renderer {
     }
 
     drawStaticBackground() {
-        // Simplified for now
+        const gridSize = 50;
+        this.backgroundCtx.clearRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
+        this.backgroundCtx.fillStyle = '#1a1a1a';
+        this.backgroundCtx.fillRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
+        this.backgroundCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        this.backgroundCtx.lineWidth = 1;
+
+        for (let x = 0; x < this.backgroundCanvas.width; x += gridSize) {
+            this.backgroundCtx.beginPath();
+            this.backgroundCtx.moveTo(x, 0);
+            this.backgroundCtx.lineTo(x, this.backgroundCanvas.height);
+            this.backgroundCtx.stroke();
+        }
+
+        for (let y = 0; y < this.backgroundCanvas.height; y += gridSize) {
+            this.backgroundCtx.beginPath();
+            this.backgroundCtx.moveTo(0, y);
+            this.backgroundCtx.lineTo(this.backgroundCanvas.width, y);
+            this.backgroundCtx.stroke();
+        }
     }
 
     drawFood(f) {

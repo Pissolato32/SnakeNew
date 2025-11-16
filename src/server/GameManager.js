@@ -1,12 +1,14 @@
 import config from '../../config/index.js';
-import Logger from '../../public/shared/Logger.js';
+import Logger from '../shared/Logger.js';
 import Room from './Room.js';
 import NetworkManager from './NetworkManager.js';
+import Metrics from './Metrics.js';
 
 class GameManager {
     constructor(io) {
         this.io = io;
         this.logger = new Logger(config.DEBUG_MODE ? 'debug' : 'info');
+        this.metrics = new Metrics();
         this.rooms = new Map();
         this.networkManager = new NetworkManager(io, this); // Pass GameManager instance
         this.logger.info('GameManager initialized to manage rooms');

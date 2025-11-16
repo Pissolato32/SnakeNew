@@ -1,4 +1,4 @@
-import CircularBuffer from './shared/CircularBuffer.js';
+import CircularBuffer from '/shared/CircularBuffer.js';
 
 class GameState {
     constructor() {
@@ -76,6 +76,9 @@ class GameState {
 
             // Update non-interpolated properties directly from B
             player.id = pB.id;
+            player.nickname = pB.nickname;
+            player.skin = pB.skin;
+            player.radius = pB.radius;
             player.color = pB.color;
             player.isDead = !pB.a;
             player.maxLength = pB.sc;

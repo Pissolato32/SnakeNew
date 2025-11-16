@@ -32,9 +32,9 @@ import {
     BOT_COUNT_HUMAN_MULTIPLIER,
     BOT_SCORE_DIFFERENCE_FACTOR,
     BOT_SCORE_DIFFERENCE_BONUS,
-    MIN_BOT_COUNT
+    MIN_BOT_COUNT,
+    GAME_TICK_RATE_MS
 } from '../shared/Constants.js';
-import Logger from '../../public/shared/Logger.js';
 
 class Room {
     constructor(roomId, io, logger) {
@@ -66,7 +66,7 @@ class Room {
 
     addPlayer(socket, playerData) {
         const { nickname, skin, color } = playerData;
-        const player = this.playerManager.createPlayer(socket.id, nickname, false, skin, color);
+        this.playerManager.createPlayer(socket.id, nickname, false, skin, color);
         socket.emit('game-setup', { worldSize: WORLD_SIZE });
     }
 
@@ -172,6 +172,9 @@ class Room {
 
         const playersState = Object.values(players).map(p => ({
             id: p.id,
+            n: p.nickname,
+            skin: p.skin,
+            radius: p.radius,
             x: p.x,
             y: p.y,
             angle: p.angle,
@@ -182,8 +185,8 @@ class Room {
             seq: p.lastProcessedInputSeq,
         }));
 
-        const foodState = food.map(f => ({ id: f.id, x: f.x, y: f.y }));
-        const powerupsState = powerups.map(p => ({ id: p.id, x: p.x, y: p.y, type: p.type }));
+        const foodState = food.map(f => ({ id: f.id, x: f.x, y: f.y, color: f.color, radius: f.radius }));
+        const powerupsState = powerups.map(p => ({ id: p.id, x: p.x, y: p.y, type: p.type, color: p.color }));
 
         return {
             t: this.tickCount,

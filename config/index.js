@@ -47,7 +47,7 @@ import {
 // dotenv.config();
 
 const config = {
-    PORT: process.env.PORT || 3002,
+    PORT: process.env.PORT || 3000,
     DEBUG_MODE: process.env.DEBUG_MODE === 'true' || false,
     BOT_COUNT: parseInt(process.env.BOT_COUNT, 10) || 10,
     WORLD_SIZE: parseInt(process.env.WORLD_SIZE, 10) || 30000,

@@ -5,7 +5,7 @@ import compression from 'compression';
 import helmet from 'helmet';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import Logger from '../../public/shared/Logger.js';
+import Logger from '../shared/Logger.js';
 import config from '../../config/index.js';
 import { GAME_TICK_RATE_MS, SNAPSHOT_RATE_HZ } from '../shared/Constants.js';
 
@@ -32,6 +32,7 @@ const io = new SocketIOServer(server);
 const PORT = config.PORT;
 
 app.use(express.static(path.join(__dirname, '../../public')));
+app.use('/shared', express.static(path.join(__dirname, '../shared')));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../../public', 'index.html'));
@@ -39,8 +40,15 @@ app.get('/', (req, res) => {
 
 // Import GameManager
 import GameManager from './GameManager.js';
+import HealthCheck from './HealthCheck.js';
 
 const gameManager = new GameManager(io);
+const healthCheck = new HealthCheck(gameManager);
+
+app.get('/health', (req, res) => {
+    const status = healthCheck.getHealthStatus();
+    res.status(200).json(status);
+});
 
 async function main() {
     await gameManager.start(); // Initialize the world

@@ -3,8 +3,24 @@
         "es2021": true
     },
     "extends": [
-        "eslint:recommended"
+        "eslint:recommended",
+        "plugin:import/recommended"
     ],
+    "settings": {
+        "import/resolver": {
+            "node": {
+                "extensions": [
+                    ".js"
+                ]
+            },
+            "alias": {
+                "map": [
+                    ["/shared", "./src/shared"]
+                ],
+                "extensions": [".js"]
+            }
+        }
+    },
     "parserOptions": {
         "ecmaVersion": "latest",
         "sourceType": "module"

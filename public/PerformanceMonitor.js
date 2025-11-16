@@ -14,6 +14,20 @@ class PerformanceMonitor {
         this.frameTimes = [];
         this.maxSamples = 60;
         this.lastTime = 0;
+
+        // Chart-related properties
+        this.chart = null;
+        this.chartData = {
+            labels: Array(50).fill(''),
+            datasets: [{
+                label: 'Frame Time (ms)',
+                borderColor: 'rgba(0, 255, 0, 1)',
+                backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                data: Array(50).fill(0),
+                fill: true,
+                tension: 0.4
+            }]
+        };
     }
     
     beginFrame(timestamp) {
@@ -28,6 +42,8 @@ class PerformanceMonitor {
             const avgFrameTime = this.frameTimes.reduce((a, b) => a + b) / this.frameTimes.length;
             this.metrics.fps = 1000 / avgFrameTime;
             this.metrics.frameTime = avgFrameTime;
+
+            this.updateChart(avgFrameTime);
         }
         this.lastTime = timestamp;
     }
@@ -63,7 +79,46 @@ class PerformanceMonitor {
     }
     
     getMetrics() {
+        this.updateMemoryUsage();
         return this.metrics;
+    }
+
+    initChart(canvasElement) {
+        if (!window.Chart) {
+            console.error('Chart.js is not loaded.');
+            return;
+        }
+        const ctx = canvasElement.getContext('2d');
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: this.chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                height: 100,
+                scales: {
+                    x: { display: false },
+                    y: {
+                        min: 0,
+                        max: 33, // Target for ~30fps
+                        grid: { color: 'rgba(0, 255, 0, 0.1)' },
+                        ticks: { color: '#00ff00' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                animation: { duration: 0 }
+            }
+        });
+    }
+
+    updateChart(frameTime) {
+        if (!this.chart) return;
+        this.chartData.datasets[0].data.push(frameTime);
+        this.chartData.datasets[0].data.shift();
+        this.chart.update();
     }
 }
 

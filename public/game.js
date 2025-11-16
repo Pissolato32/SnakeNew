@@ -10,16 +10,21 @@ const INTERPOLATION_BUFFER_MS = 120; // 120ms buffer for interpolation
 class GameClient {
     constructor() {
         this.gameState = new GameState();
-        this.uiManager = new UIManager();
+        this.perfMonitor = new PerformanceMonitor();
+        this.uiManager = new UIManager(this.perfMonitor);
         this.socketClient = new SocketClient();
         this.renderer = new Renderer(this.gameState);
         this.inputManager = new InputManager(this.renderer.gameCanvas);
-        this.perfMonitor = new PerformanceMonitor();
 
         this.snapshotBuffer = [];
         this.pendingInputs = [];
         this.gameLoopRunning = false;
         this.lastTime = 0;
+
+        // Sound integration
+        this.eatSound = new Audio('/eat.mp3');
+        this.eatSound.volume = 0.3; // Adjust volume to not be too loud
+        this.lastPlayerLength = 0;
     }
 
     init() {
@@ -87,6 +92,18 @@ class GameClient {
 
         this.processInputs();
         this.renderInterpolatedState();
+
+        // Play eat sound if length increased
+        const self = this.gameState.getPlayer(this.gameState.selfId);
+        if (self && self.maxLength > this.lastPlayerLength) {
+            // Use a clone to allow for rapid playback if multiple food items are eaten
+            const sound = this.eatSound.cloneNode();
+            sound.volume = 0.3;
+            sound.play().catch(error => this.logger.warn(`Audio play failed: ${error}`));
+        }
+        if (self) {
+            this.lastPlayerLength = self.maxLength;
+        }
         
         this.uiManager.updateScoreAndLeaderboard(this.gameState.players, this.gameState.selfId);
         const input = this.inputManager.getInput();
