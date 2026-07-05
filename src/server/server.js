@@ -18,10 +18,10 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ['\'self\''],
-            scriptSrc: ['\'self\'', '\'unsafe-inline\'', 'https://cdn.jsdelivr.net'],
-            styleSrc: ['\'self\'', '\'unsafe-inline\''],
+            scriptSrc: ['\'self\'', '\'unsafe-inline\'', 'https://cdn.jsdelivr.net', 'https://cdn.socket.io'],
+            styleSrc: ['\'self\'', '\'unsafe-inline\'', 'https://fonts.googleapis.com'],
             imgSrc: ['\'self\'', 'data:'],
-            connectSrc: ['\'self\'', 'ws:', 'wss:', 'https://cdn.jsdelivr.net']
+            connectSrc: ['\'self\'', 'ws:', 'wss:', 'https://cdn.jsdelivr.net', 'https://cdn.socket.io']
         }
     }
 }));
@@ -31,8 +31,18 @@ const io = new SocketIOServer(server);
 
 const PORT = config.PORT;
 
-app.use(express.static(path.join(__dirname, '../../public')));
-app.use('/shared', express.static(path.join(__dirname, '../shared')));
+const staticOptions = {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        } else if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
+};
+
+app.use(express.static(path.join(__dirname, '../../public'), staticOptions));
+app.use('/shared', express.static(path.join(__dirname, '../shared'), staticOptions));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../../public', 'index.html'));
