@@ -58,12 +58,37 @@ class UIManager {
         }
 
         this.strategySliders.forEach(slider => {
-            const el = document.getElementById(`${slider}Slider`);
-            if (el) {
-                el.addEventListener('input', () => {
+            const rangeEl = document.getElementById(`${slider}Slider`);
+            const numberEl = document.getElementById(`${slider}Value`);
+
+            if (rangeEl && numberEl) {
+                // Slider → Number input (real-time as user drags)
+                rangeEl.addEventListener('input', () => {
+                    const val = parseFloat(rangeEl.value);
+                    numberEl.value = val.toFixed(2);
                     if (this.onStrategyChange) {
-                        this.onStrategyChange(slider, parseInt(el.value));
+                        this.onStrategyChange(slider, val);
                     }
+                });
+
+                // Number input → Slider (when user types a value)
+                numberEl.addEventListener('input', () => {
+                    let val = parseFloat(numberEl.value);
+                    if (isNaN(val)) return;
+                    val = Math.max(0, Math.min(100, val));
+                    rangeEl.value = val;
+                    if (this.onStrategyChange) {
+                        this.onStrategyChange(slider, val);
+                    }
+                });
+
+                // Format to 2 decimals on blur (when user leaves the field)
+                numberEl.addEventListener('blur', () => {
+                    let val = parseFloat(numberEl.value);
+                    if (isNaN(val)) val = 50;
+                    val = Math.max(0, Math.min(100, val));
+                    numberEl.value = val.toFixed(2);
+                    rangeEl.value = val;
                 });
             }
         });

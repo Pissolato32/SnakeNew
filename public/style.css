@@ -156,8 +156,36 @@ select {
     margin-bottom: 10px;
     font-size: 12px;
 }
-.slider-container input {
-    width: 100%;
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.slider-row input[type="range"] {
+    flex: 1;
+    min-width: 0;
+}
+.slider-row input[type="number"] {
+    width: 60px;
+    padding: 3px 4px;
+    background: #0b0c10;
+    border: 1px solid #45a29e;
+    color: #66fcf1;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+.slider-row input[type="number"]::-webkit-outer-spin-button,
+.slider-row input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.slider-row input[type="number"]:focus {
+    outline: none;
+    border-color: #66fcf1;
+    box-shadow: 0 0 4px rgba(102, 252, 241, 0.4);
 }
 
 #blackboardState {
