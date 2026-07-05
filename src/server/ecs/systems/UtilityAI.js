@@ -74,14 +74,19 @@ class UtilityAI {
         let bestFoodScore = -Infinity;
 
         for (const food of agent.blackboard.lastKnownFood) {
-            const dist = Math.hypot(agent.x - food.x, agent.y - food.y);
+            const dx = agent.x - food.x;
+            const dy = agent.y - food.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
             // Avalia o item de comida
             let itemScore = (food.score * 50) - dist;
 
             // Cautela: se a comida estiver no dangerMap ou perto de threat
             if (agent.strategy.caution > agent.strategy.greed) {
                 for (const threat of agent.blackboard.knownThreats) {
-                    if (Math.hypot(food.x - threat.x, food.y - threat.y) < 300) {
+                    const ftdx = food.x - threat.x;
+                    const ftdy = food.y - threat.y;
+                    // Evita Math.sqrt para a checagem de proximidade da ameaça (300^2 = 90000)
+                    if (ftdx * ftdx + ftdy * ftdy < 90000) {
                         itemScore -= 200 * (agent.strategy.caution / 50);
                     }
                 }

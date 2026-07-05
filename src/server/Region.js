@@ -205,9 +205,7 @@ class Region {
     }
 
     _updateAgentAI(agent) {
-        if (this.tickCount % (AI_TICK_RATE_DIVISOR || 2) === 0) {
-            this.aiManager.update(agent);
-        }
+        this.aiManager.update(agent, this.tickCount);
     }
 
     _handleAgentBoosting(agent) {
