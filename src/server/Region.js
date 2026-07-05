@@ -68,7 +68,7 @@ class Region {
 
     addAgent(socket, agentData) {
         const { nickname, skin, color } = agentData;
-        this.agentManager.createAgent(socket.id, nickname, true, skin, color);
+        this.agentManager.createAgent(socket.id, nickname, false, skin, color);
         socket.emit('game-setup', { worldSize: WORLD_SIZE });
     }
 
@@ -205,7 +205,7 @@ class Region {
     }
 
     _updateAgentAI(agent) {
-        if (agent.isBot && this.tickCount % (AI_TICK_RATE_DIVISOR || 2) === 0) {
+        if (this.tickCount % (AI_TICK_RATE_DIVISOR || 2) === 0) {
             this.aiManager.update(agent);
         }
     }
