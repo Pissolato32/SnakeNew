@@ -29,6 +29,7 @@ class PersistenceSystem {
                 id: agent.id,
                 nickname: agent.nickname,
                 isBot: agent.isBot,
+                token: agent.token,
                 x: agent.x,
                 y: agent.y,
                 strategy: agent.strategy,

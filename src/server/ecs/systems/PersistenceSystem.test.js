@@ -27,6 +27,7 @@ describe('PersistenceSystem', () => {
                 id: 'player-1',
                 nickname: 'Test Snake',
                 isBot: false,
+                token: 'mock-token-123',
                 x: 100,
                 y: 200,
                 maxLength: 35,
@@ -43,6 +44,7 @@ describe('PersistenceSystem', () => {
         expect(savedData.agents).toHaveLength(1);
         expect(savedData.agents[0].id).toBe('player-1');
         expect(savedData.agents[0].isBot).toBe(false);
+        expect(savedData.agents[0].token).toBe('mock-token-123');
         expect(savedData.agents[0].blackboard.currentGoal).toBe('HUNT');
     });
 

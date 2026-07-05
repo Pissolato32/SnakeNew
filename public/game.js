@@ -41,6 +41,18 @@ class GameClient {
         this.socketClient.onGameSetup = (config) => {
             this.gameState.setWorldSize(config.worldSize);
             this.renderer.drawStaticBackground();
+
+            // Save token to localStorage for frictionless secure reconnection
+            const details = this.uiManager.getLoginDetails();
+            if (config.token && details.nickname) {
+                localStorage.setItem(`snakenew_token_${details.nickname}`, config.token);
+            }
+
+            this.startGame();
+        };
+
+        this.socketClient.onLoginFailed = (data) => {
+            alert(data.error || 'Login falhou.');
         };
 
         this.socketClient.onSnapshot = (snapshot) => {
@@ -71,8 +83,11 @@ class GameClient {
 
     joinGame() {
         const details = this.uiManager.getLoginDetails();
+        const token = localStorage.getItem(`snakenew_token_${details.nickname}`);
+        if (token) {
+            details.token = token;
+        }
         this.socketClient.joinGame(details);
-        this.startGame();
     }
 
     startGame() {

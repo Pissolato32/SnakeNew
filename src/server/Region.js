@@ -80,6 +80,7 @@ class Region {
                     agent.y = savedAgent.y;
                     agent.maxLength = savedAgent.maxLength || agent.maxLength;
                     agent.radius = savedAgent.radius || agent.radius;
+                    agent.token = savedAgent.token;
                     if (savedAgent.strategy) agent.strategy = { ...agent.strategy, ...savedAgent.strategy };
                     if (savedAgent.needs) agent.needs = { ...agent.needs, ...savedAgent.needs };
                     if (savedAgent.blackboard) agent.blackboard = { ...agent.blackboard, ...savedAgent.blackboard };
@@ -105,22 +106,30 @@ class Region {
     }
 
     addAgent(socket, agentData) {
-        const { nickname, skin, color } = agentData;
+        const { nickname, skin, color, token } = agentData;
         
         const existingAgent = Object.values(this.agentManager.getAgents()).find(
             a => a.nickname === nickname && !a.isBot
         );
 
         if (existingAgent) {
+            if (existingAgent.token && existingAgent.token !== token) {
+                this.logger.warn(`Security alert: Attempted hijack of agent '${nickname}' with invalid token.`);
+                socket.emit('login-failed', { error: 'Este nickname já está em uso por outra cobra ativa!' });
+                return;
+            }
+            
             this.logger.info(`Reconnecting strategist to existing agent: ${nickname}`);
             const oldId = existingAgent.id;
             delete this.agentManager.agents[oldId];
             existingAgent.id = socket.id;
             this.agentManager.agents[socket.id] = existingAgent;
-            socket.emit('game-setup', { worldSize: WORLD_SIZE });
+            socket.emit('game-setup', { worldSize: WORLD_SIZE, token: existingAgent.token });
         } else {
-            this.agentManager.createAgent(socket.id, nickname, false, skin, color);
-            socket.emit('game-setup', { worldSize: WORLD_SIZE });
+            const secureToken = token || `tok_${Math.random().toString(36).substr(2, 9)}_${Date.now().toString(36)}`;
+            const agent = this.agentManager.createAgent(socket.id, nickname, false, skin, color);
+            agent.token = secureToken;
+            socket.emit('game-setup', { worldSize: WORLD_SIZE, token: secureToken });
         }
     }
 

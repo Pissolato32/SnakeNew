@@ -44,6 +44,10 @@ class SocketClient {
             this.onPong(this.ping);
             this.socket.emit('pingUpdate', this.ping);
         });
+
+        this.socket.on('login-failed', (data) => {
+            this.onLoginFailed(data);
+        });
     }
 
     joinGame(details) {
@@ -69,6 +73,7 @@ class SocketClient {
     onSnapshot(_snapshot) {}
     onDeath(_data) {}
     onPong(_ping) {}
+    onLoginFailed(_data) {}
 }
 
 export default SocketClient;
