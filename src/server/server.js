@@ -26,11 +26,33 @@ app.use(helmet({
     }
 }));
 app.use(compression());
+
+// Custom CORS middleware to dynamically handle credentials and Vercel domains
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
     cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
+        origin: (origin, callback) => {
+            // Reflect request origin or fallback to allow all
+            callback(null, origin || '*');
+        },
+        methods: ['GET', 'POST'],
+        credentials: true
     }
 });
 

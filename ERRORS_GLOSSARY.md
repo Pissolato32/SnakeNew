@@ -94,16 +94,31 @@ Este documento registra de forma resumida todos os erros críticos encontrados e
 
 ---
 
-### 8. Bloqueio de CORS na Conexão entre Vercel e Render
+### 8. Bloqueio de CORS na Conexão entre Vercel e Render (Credenciais e Origem Dinâmica)
 * **Erro:** 
   `Access to XMLHttpRequest at 'https://snakenew.onrender.com/...' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present...`
-* **Causa:** O servidor Socket.IO na Render foi inicializado cruamente, sem informar as origens permitidas (CORS), bloqueando conexões que vinham da hospedagem do frontend na Vercel.
-* **Solução:** Adicionar a configuração de CORS permitindo conexões de qualquer origem na inicialização do Socket.IO:
+* **Causa:** O Socket.io por padrão pode enviar cookies ou cabeçalhos de autenticação (credenciais). Sob a especificação de CORS do W3C, se a requisição inclui credenciais, a origem permitida `Access-Control-Allow-Origin` não pode ser o curinga (`*`) e deve ser exatamente a URL do originador da requisição.
+* **Solução:** Configurar a política de CORS de forma dinâmica no Express e no construtor do Socket.IO para ler a origem da requisição e refleti-la dinamicamente, ativando `credentials: true`:
   ```javascript
+  // No Express (server.js):
+  app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization');
+      if (req.method === 'OPTIONS') return res.sendStatus(200);
+      next();
+  });
+
+  // No Socket.IO Server:
   const io = new SocketIOServer(server, {
       cors: {
-          origin: '*',
-          methods: ['GET', 'POST']
+          origin: (origin, callback) => {
+              callback(null, origin || '*');
+          },
+          methods: ['GET', 'POST'],
+          credentials: true
       }
   });
   ```
