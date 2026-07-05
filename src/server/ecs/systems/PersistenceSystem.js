@@ -32,7 +32,9 @@ class PersistenceSystem {
                 y: agent.y,
                 strategy: agent.strategy,
                 needs: agent.needs,
-                blackboard: agent.blackboard,
+                blackboard: {
+                    currentGoal: agent.blackboard?.currentGoal || 'EXPLORE'
+                },
                 stats: agent.stats
             });
         }
