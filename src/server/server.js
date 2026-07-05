@@ -27,7 +27,12 @@ app.use(helmet({
 }));
 app.use(compression());
 const server = http.createServer(app);
-const io = new SocketIOServer(server);
+const io = new SocketIOServer(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST']
+    }
+});
 
 const PORT = config.PORT;
 
