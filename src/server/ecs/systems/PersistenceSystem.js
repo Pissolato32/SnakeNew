@@ -30,8 +30,12 @@ class PersistenceSystem {
                 nickname: agent.nickname,
                 isBot: agent.isBot,
                 token: agent.token,
+                isOffline: agent.isOffline || false,
+                offlineSince: agent.offlineSince || null,
                 x: agent.x,
                 y: agent.y,
+                maxLength: agent.maxLength,
+                radius: agent.radius,
                 strategy: agent.strategy,
                 needs: agent.needs,
                 blackboard: {

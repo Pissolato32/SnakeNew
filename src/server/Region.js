@@ -81,6 +81,8 @@ class Region {
                     agent.maxLength = savedAgent.maxLength || agent.maxLength;
                     agent.radius = savedAgent.radius || agent.radius;
                     agent.token = savedAgent.token;
+                    agent.isOffline = savedAgent.isOffline || false;
+                    agent.offlineSince = savedAgent.offlineSince || null;
                     if (savedAgent.strategy) agent.strategy = { ...agent.strategy, ...savedAgent.strategy };
                     if (savedAgent.needs) agent.needs = { ...agent.needs, ...savedAgent.needs };
                     if (savedAgent.blackboard) agent.blackboard = { ...agent.blackboard, ...savedAgent.blackboard };
@@ -123,6 +125,15 @@ class Region {
             const oldId = existingAgent.id;
             delete this.agentManager.agents[oldId];
             existingAgent.id = socket.id;
+            existingAgent.isOffline = false;
+            
+            // Log how long the snake was autonomously AI-controlled
+            if (existingAgent.offlineSince) {
+                const offlineDuration = Math.floor((Date.now() - existingAgent.offlineSince) / 1000);
+                this.logger.info(`Agent '${nickname}' was AI-controlled for ${offlineDuration}s. Returning to player control.`);
+                existingAgent.offlineSince = null;
+            }
+            
             this.agentManager.agents[socket.id] = existingAgent;
             socket.emit('game-setup', { worldSize: WORLD_SIZE, token: existingAgent.token });
         } else {

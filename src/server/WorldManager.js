@@ -49,12 +49,17 @@ class WorldManager {
 
     handleDisconnect(socket) {
         for (const region of this.regions.values()) {
-            // Em ECS Persistent World, desconectar o socket não apaga o Agent.
-            // O Agent continua existindo no mundo. Apenas desatrelamos o socket, ou setamos offline.
-            // Mas para o MVP de refatoração, vamos apenas remover o socket dos observers.
-            this.logger.info(`Strategist ${socket.id} disconnected from region ${region.id}`);
-
-            // Não deletamos mais a region, pois ela é persistente.
+            const agent = region.agentManager.getAgents()[socket.id];
+            if (agent && !agent.isBot) {
+                agent.isOffline = true;
+                agent.offlineSince = Date.now();
+                this.logger.info(`Strategist '${agent.nickname}' (${socket.id}) marked OFFLINE in region ${region.id}. Snake continues living under AI control.`);
+                
+                // Persist immediately so offline state survives server restarts
+                if (region.isReady) {
+                    region.persistenceSystem.saveState(region.agentManager.getAgents());
+                }
+            }
         }
     }
 
