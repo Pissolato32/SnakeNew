@@ -155,10 +155,13 @@ class UtilityAI {
         const WORLD_SIZE = config.game ? config.game.WORLD_SIZE : 30000;
         const BOUNDARY_BUFFER = config.game ? config.game.BOT_BOUNDARY_BUFFER : 500;
 
-        if (agent.x < BOUNDARY_BUFFER) vec.x += 1;
-        if (agent.x > WORLD_SIZE - BOUNDARY_BUFFER) vec.x -= 1;
-        if (agent.y < BOUNDARY_BUFFER) vec.y += 1;
-        if (agent.y > WORLD_SIZE - BOUNDARY_BUFFER) vec.y -= 1;
+        const dist = Math.hypot(agent.x, agent.y);
+        const halfWorld = WORLD_SIZE / 2;
+        if (dist > halfWorld - BOUNDARY_BUFFER) {
+            const angleToCenter = Math.atan2(-agent.y, -agent.x);
+            vec.x = Math.cos(angleToCenter);
+            vec.y = Math.sin(angleToCenter);
+        }
 
         return vec;
     }

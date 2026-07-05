@@ -116,6 +116,8 @@ class GameState {
             }
             item.id = itemB.id;
             if (itemB.type) item.type = itemB.type;
+            if (itemB.color) item.color = itemB.color;
+            if (itemB.radius) item.radius = itemB.radius;
         }
 
         for (const id of itemMap.keys()) {

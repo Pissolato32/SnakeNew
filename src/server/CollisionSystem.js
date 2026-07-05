@@ -74,6 +74,9 @@ class CollisionSystem {
             if (collisionDetected) {
                 totalScore += f.score;
                 foodToRemove.add(f);
+                if (agent.needs) {
+                    agent.needs.hunger = Math.max(0, agent.needs.hunger - f.score * 5);
+                }
             }
         });
 

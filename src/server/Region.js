@@ -194,7 +194,7 @@ class Region {
         }));
 
         const foodState = food.map(f => ({ id: f.id, x: f.x, y: f.y, color: f.color, radius: f.radius }));
-        const powerupsState = powerups.map(p => ({ id: p.id, x: p.x, y: p.y, type: p.type, color: p.color }));
+        const powerupsState = powerups.map(p => ({ id: p.id, x: p.x, y: p.y, type: p.type, color: p.color, radius: p.radius }));
 
         return {
             t: this.tickCount,
