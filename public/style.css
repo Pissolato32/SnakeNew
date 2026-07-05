@@ -191,3 +191,23 @@ select {
     padding: 10px;
     font-size: 12px;
 }
+
+#backgroundCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+}
+
+#minimapCanvas {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    border: 2px solid #45a29e;
+    border-radius: 50%;
+    z-index: 5;
+    background: #000000;
+}
