@@ -11,6 +11,7 @@ class WorldManager {
         this.metrics = new Metrics();
         this.regions = new Map();
         this.networkManager = new NetworkManager(io, this);
+        this.isSleeping = false;
         this.logger.info('WorldManager initialized to manage regions');
     }
 
@@ -69,12 +70,31 @@ class WorldManager {
     }
 
     tick() {
+        if (this.io.sockets.sockets.size === 0) {
+            if (!this.isSleeping) {
+                this.isSleeping = true;
+                this.logger.info('No active connections. Putting world simulation to sleep...');
+                for (const region of this.regions.values()) {
+                    if (region.isReady) {
+                        region.persistenceSystem.saveState(region.agentManager.getAgents());
+                    }
+                }
+            }
+            return;
+        }
+
+        if (this.isSleeping) {
+            this.isSleeping = false;
+            this.logger.info('Active connection detected. Waking up world simulation!');
+        }
+
         for (const region of this.regions.values()) {
             region.tick();
         }
     }
 
     sendSnapshots() {
+        if (this.isSleeping || this.io.sockets.sockets.size === 0) return;
         for (const region of this.regions.values()) {
             const snapshot = region.getSnapshot();
             this.io.to(region.id).emit('snapshot', snapshot);
