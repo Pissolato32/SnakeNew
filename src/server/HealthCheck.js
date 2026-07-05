@@ -7,7 +7,7 @@ class HealthCheck {
         const uptime = this.WorldManager.metrics.getUptime();
         
         let totalAgentCount = 0;
-        for (const Region of this.WorldManager.Regions.values()) {
+        for (const Region of this.WorldManager.regions.values()) {
             totalAgentCount += Object.keys(Region.agentManager.getAgents()).length;
         }
 
@@ -17,7 +17,7 @@ class HealthCheck {
             status: 'healthy',
             uptime: uptime,
             agents: totalAgentCount,
-            Regions: this.WorldManager.Regions.size,
+            regions: this.WorldManager.regions.size,
             memory: {
                 rss: `${(memoryUsage.rss / 1024 / 1024).toFixed(2)} MB`,
                 heapUsed: `${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
