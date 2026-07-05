@@ -39,6 +39,20 @@ async function build() {
         await fs.copyFile(chartJsSrc, chartJsDest);
         console.log('- Copied: chart.js');
 
+        // --- Copy shared files for static serving on Vercel ---
+        console.log('\nProcessing shared files...');
+        const sharedSrcDir = path.join(__dirname, '../src/shared');
+        const sharedDestDir = path.join(publicDir, 'shared');
+        await fs.mkdir(sharedDestDir, { recursive: true });
+        const sharedFiles = await fs.readdir(sharedSrcDir);
+        const sharedJsFiles = sharedFiles.filter(file => file.endsWith('.js') && !file.endsWith('.test.js') && !file.endsWith('.spec.js'));
+        for (const file of sharedJsFiles) {
+            const srcPath = path.join(sharedSrcDir, file);
+            const destPath = path.join(sharedDestDir, file);
+            await fs.copyFile(srcPath, destPath);
+            console.log(`- Copied shared: ${file}`);
+        }
+
         console.log('\nBuild process completed successfully!');
 
     } catch (error) {
