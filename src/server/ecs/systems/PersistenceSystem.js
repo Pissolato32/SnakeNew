@@ -28,6 +28,7 @@ class PersistenceSystem {
             state.agents.push({
                 id: agent.id,
                 nickname: agent.nickname,
+                isBot: agent.isBot,
                 x: agent.x,
                 y: agent.y,
                 strategy: agent.strategy,
@@ -43,6 +44,16 @@ class PersistenceSystem {
             await this.provider.saveState(state);
         } catch (err) {
             this.logger.error('PersistenceSystem failed to save state:', err);
+        }
+    }
+
+    async loadState() {
+        try {
+            const state = await this.provider.loadState();
+            return state;
+        } catch (err) {
+            this.logger.error('PersistenceSystem failed to load state:', err);
+            return null;
         }
     }
 }

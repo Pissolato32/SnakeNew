@@ -16,23 +16,21 @@ class WorldManager {
 
     start() {
         this.networkManager.setupSocketListeners();
+        
+        // Pre-create region 'A' on server startup so the world stays active 24/7
+        const regionId = 'A';
+        if (!this.regions.has(regionId)) {
+            this.logger.info(`Pre-creating persistent region: ${regionId}`);
+            const newRegion = new Region(regionId, this.io, this.logger);
+            this.regions.set(regionId, newRegion);
+        }
+
         this.logger.info('WorldManager started and listening for connections.');
     }
 
     findOrCreateRegion(socket, strategistData) {
-        // Simple logic: for now, all agents join a single region 'A'.
         const regionId = 'A';
-        if (!this.regions.has(regionId)) {
-            this.logger.info(`Creating new region with id: ${regionId}`);
-            const newRegion = new Region(regionId, this.io, this.logger);
-            this.regions.set(regionId, newRegion);
-        }
         const region = this.regions.get(regionId);
-
-        // Em vez de adicionar diretamente no room com ID de socket,
-        // o jogador apenas se vincula à sala para receber snapshots.
-        // O Strategist (jogador) pode ter múltiplos ou nenhum agente inicialmente,
-        // mas para manter a compatibilidade, chamamos addAgent.
         region.addAgent(socket, strategistData);
         socket.join(regionId);
     }

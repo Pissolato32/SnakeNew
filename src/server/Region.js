@@ -56,21 +56,72 @@ class Region {
 
         this.tickCount = 0;
         this.dynamicManagementCounter = 0;
+        this.isReady = false;
         this.initializeWorld();
     }
 
-    initializeWorld() {
+    async initializeWorld() {
         this.logger.info(`Initializing world for Region ${this.id}...`);
-        this.agentManager.initBots();
+        
+        try {
+            const savedState = await this.persistenceSystem.loadState();
+            if (savedState && savedState.agents && savedState.agents.length > 0) {
+                this.logger.info(`Loading ${savedState.agents.length} agents from persistent state...`);
+                for (const savedAgent of savedState.agents) {
+                    const agent = this.agentManager.createAgent(
+                        savedAgent.id,
+                        savedAgent.nickname,
+                        savedAgent.isBot !== undefined ? savedAgent.isBot : true,
+                        savedAgent.skin || 'default',
+                        savedAgent.color
+                    );
+                    
+                    agent.x = savedAgent.x;
+                    agent.y = savedAgent.y;
+                    agent.maxLength = savedAgent.maxLength || agent.maxLength;
+                    agent.radius = savedAgent.radius || agent.radius;
+                    if (savedAgent.strategy) agent.strategy = { ...agent.strategy, ...savedAgent.strategy };
+                    if (savedAgent.needs) agent.needs = { ...agent.needs, ...savedAgent.needs };
+                    if (savedAgent.blackboard) agent.blackboard = { ...agent.blackboard, ...savedAgent.blackboard };
+                    
+                    agent.body.clear();
+                    agent.body.addFirst({ x: agent.x, y: agent.y });
+                }
+            } else {
+                this.logger.info('No persistent state found, initializing fresh bots.');
+                this.agentManager.initBots();
+            }
+        } catch (err) {
+            this.logger.error('Error during world initialization:', err);
+            this.agentManager.initBots();
+        }
+
         const initialAgentCount = Object.values(this.agentManager.getAgents()).length;
         const initialFoodCount = DYNAMIC_FOOD_TARGET_BASE + (initialAgentCount * DYNAMIC_FOOD_TARGET_PER_PLAYER);
         this.foodManager.addFoodInBatch(initialFoodCount, this.agentManager.getAgents(), SPAWN_BUFFER);
+        
+        this.isReady = true;
+        this.logger.info(`Region ${this.id} initialization complete.`);
     }
 
     addAgent(socket, agentData) {
         const { nickname, skin, color } = agentData;
-        this.agentManager.createAgent(socket.id, nickname, false, skin, color);
-        socket.emit('game-setup', { worldSize: WORLD_SIZE });
+        
+        const existingAgent = Object.values(this.agentManager.getAgents()).find(
+            a => a.nickname === nickname && !a.isBot
+        );
+
+        if (existingAgent) {
+            this.logger.info(`Reconnecting strategist to existing agent: ${nickname}`);
+            const oldId = existingAgent.id;
+            delete this.agentManager.agents[oldId];
+            existingAgent.id = socket.id;
+            this.agentManager.agents[socket.id] = existingAgent;
+            socket.emit('game-setup', { worldSize: WORLD_SIZE });
+        } else {
+            this.agentManager.createAgent(socket.id, nickname, false, skin, color);
+            socket.emit('game-setup', { worldSize: WORLD_SIZE });
+        }
     }
 
     removeAgent(socketId) {
@@ -86,6 +137,7 @@ class Region {
     }
 
     tick() {
+        if (!this.isReady) return;
         const tickStartTime = process.hrtime.bigint();
 
         this.tickCount++;
