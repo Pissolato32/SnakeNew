@@ -187,6 +187,10 @@ class Region {
             a: !p.isDead,
             sc: p.maxLength,
             seq: p.lastProcessedInputSeq,
+            needs: p.needs,
+            blackboard: {
+                currentGoal: p.blackboard?.currentGoal || 'EXPLORE'
+            }
         }));
 
         const foodState = food.map(f => ({ id: f.id, x: f.x, y: f.y, color: f.color, radius: f.radius }));
@@ -194,7 +198,7 @@ class Region {
 
         return {
             t: this.tickCount,
-            agents: agentsState,
+            players: agentsState,
             food: foodState,
             powerups: powerupsState,
         };

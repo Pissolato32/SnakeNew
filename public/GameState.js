@@ -47,7 +47,7 @@ class GameState {
                 player.y = this.lerp(pA.y, pB.y, t);
                 player.angle = this.slerp(pA.angle, pB.angle, t);
                 
-                // Interpolate body segments for smooth snake animation
+                // Interpolate body segments for smooth Creature animation
                 const bodyA = pA.s || [];
                 const bodyB = pB.s || [];
                 const maxLength = Math.max(bodyA.length, bodyB.length);
@@ -76,12 +76,14 @@ class GameState {
 
             // Update non-interpolated properties directly from B
             player.id = pB.id;
-            player.nickname = pB.nickname;
+            player.nickname = pB.n || pB.nickname;
             player.skin = pB.skin;
             player.radius = pB.radius;
             player.color = pB.color;
             player.isDead = !pB.a;
             player.maxLength = pB.sc;
+            player.needs = pB.needs;
+            player.blackboard = pB.blackboard;
         }
 
         // Remove players that are no longer in the snapshot

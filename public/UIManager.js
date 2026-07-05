@@ -19,6 +19,13 @@ class UIManager {
         this.nextColor = document.getElementById('nextColor');
         this.debugPanel = document.getElementById('debug-panel');
 
+        this.energyValue = document.getElementById('energyValue');
+        this.energyBar = document.getElementById('energyBar');
+        this.hungerValue = document.getElementById('hungerValue');
+        this.hungerBar = document.getElementById('hungerBar');
+        this.blackboardState = document.getElementById('blackboardState');
+        this.strategySliders = ['aggression', 'caution', 'curiosity'];
+
         this.solidColors = UI_SOLID_COLORS;
         this.currentColorIndex = 0;
         this.profilerChartInitialized = false;
@@ -50,6 +57,17 @@ class UIManager {
             this.nextColor.addEventListener('click', () => this.changeColor(1));
         }
 
+        this.strategySliders.forEach(slider => {
+            const el = document.getElementById(`${slider}Slider`);
+            if (el) {
+                el.addEventListener('input', () => {
+                    if (this.onStrategyChange) {
+                        this.onStrategyChange(slider, parseInt(el.value));
+                    }
+                });
+            }
+        });
+
         if (this.debugPanel) {
             this.makeDraggable(this.debugPanel);
             const closeButton = this.debugPanel.querySelector('.close-button');
@@ -69,9 +87,9 @@ class UIManager {
     }
 
     showGameUI() {
-        this.loginScreen.style.display = 'none';
+        this.loginScreen.classList.add('hidden');
         this.deathScreen.style.display = 'none';
-        this.gameUI.style.display = 'block';
+        this.gameUI.classList.remove('hidden');
         
         // Show the canvas elements
         const gameCanvas = document.getElementById('gameCanvas');
@@ -84,8 +102,8 @@ class UIManager {
 
     showDeathScreen(score) {
         this.finalScore.textContent = score;
-        this.deathScreen.style.display = 'flex';
-        this.gameUI.style.display = 'none';
+        this.deathScreen.classList.remove('hidden');
+        this.gameUI.classList.add('hidden');
     }
 
     updateScoreAndLeaderboard(players, selfId) {
@@ -97,13 +115,23 @@ class UIManager {
         this.leaderboardList.innerHTML = '';
         sortedPlayers.slice(0, 10).forEach(p => {
             const li = document.createElement('li');
-            li.textContent = `${p.nickname} - ${Math.floor(p.maxLength)}`;
+            li.textContent = `${p.nickname || 'Anonymous'} - ${Math.floor(p.maxLength)}`;
             if (p.id === selfId) {
                 li.style.color = LEADERBOARD_SELF_COLOR;
                 li.style.fontWeight = 'bold';
             }
             this.leaderboardList.appendChild(li);
         });
+
+        if (self.needs) {
+            if (this.energyValue) this.energyValue.textContent = Math.floor(self.needs.energy || 0);
+            if (this.energyBar) this.energyBar.style.width = `${self.needs.energy || 0}%`;
+            if (this.hungerValue) this.hungerValue.textContent = Math.floor(self.needs.hunger || 0);
+            if (this.hungerBar) this.hungerBar.style.width = `${self.needs.hunger || 0}%`;
+        }
+        if (self.blackboard && this.blackboardState) {
+            this.blackboardState.textContent = `Goal: ${self.blackboard.currentGoal || 'EXPLORE'}`;
+        }
     }
 
     toggleDebugPanel(show) {

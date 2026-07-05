@@ -8,7 +8,11 @@ class SocketClient {
     }
 
     connect() {
-        this.socket = io();
+        const connectionUrl = window.location.hostname.includes('vercel.app')
+            ? 'http://localhost:3000'
+            : undefined;
+
+        this.socket = io(connectionUrl);
         this.setupSocketListeners();
         
         setInterval(() => {

@@ -111,47 +111,17 @@ class GameClient {
         if (!self || self.isDead) return;
 
         const input = this.inputManager.getInput();
-        const worldMouseX = (input.mouse.x - this.renderer.gameCanvas.width / 2) / this.renderer.camera.zoom + this.renderer.camera.x;
-        const worldMouseY = (input.mouse.y - this.renderer.gameCanvas.height / 2) / this.renderer.camera.zoom + this.renderer.camera.y;
-        const targetAngle = Math.atan2(worldMouseY - self.y, worldMouseX - self.x);
-
-        const inputPayload = { angle: targetAngle, isBoosting: input.isBoosting };
-        const seq = this.socketClient.sendInput(inputPayload);
-        
-        this.pendingInputs.push({ seq, ...inputPayload });
-        
-        // Client-side prediction
-        this.predictMovement(self, inputPayload);
+        if (input) {
+            this.socketClient.sendInput(input);
+        }
     }
-    
+
     predictMovement(player, input) {
-        // Simplified prediction based on user input
-        player.angle = input.angle;
-        const speed = input.isBoosting ? player.speed * 1.5 : player.speed; // Approximate
-        player.x += Math.cos(player.angle) * speed * (1/60); // Assume 60fps for prediction delta
-        player.y += Math.sin(player.angle) * speed * (1/60);
+        // No client-side prediction needed for spectator/AI-driven ecosystem
     }
 
     reconcile(snapshot) {
-        const serverState = snapshot.players.find(p => p.id === this.gameState.selfId);
-        const self = this.gameState.getPlayer(this.gameState.selfId);
-
-        if (!self || !serverState) return;
-
-        // Remove acknowledged inputs
-        this.pendingInputs = this.pendingInputs.filter(input => input.seq > serverState.seq);
-
-        // Set authoritative state from server
-        self.x = serverState.x;
-        self.y = serverState.y;
-        self.angle = serverState.angle;
-        self.maxLength = serverState.sc;
-        // ... and other stats
-
-        // Re-apply pending inputs for reconciliation
-        this.pendingInputs.forEach(input => {
-            this.predictMovement(self, input);
-        });
+        // No client-side reconciliation needed for spectator/AI-driven ecosystem
     }
 
     renderInterpolatedState() {

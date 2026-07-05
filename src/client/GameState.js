@@ -76,12 +76,14 @@ class GameState {
 
             // Update non-interpolated properties directly from B
             player.id = pB.id;
-            player.nickname = pB.nickname;
+            player.nickname = pB.n || pB.nickname;
             player.skin = pB.skin;
             player.radius = pB.radius;
             player.color = pB.color;
             player.isDead = !pB.a;
             player.maxLength = pB.sc;
+            player.needs = pB.needs;
+            player.blackboard = pB.blackboard;
         }
 
         // Remove players that are no longer in the snapshot

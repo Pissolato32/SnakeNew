@@ -56,13 +56,35 @@ class AgentManager {
             strategy: {
                 aggression: 50,
                 caution: 50,
-                curiosity: 50
+                curiosity: 50,
+                greed: 50
             },
-            blackboard: {},
-            needs: { hunger: 0, energy: 100 },
+            blackboard: {
+                currentGoal: 'EXPLORE',
+                currentTarget: null,
+                lastDecision: null,
+                decisionCooldown: 0,
+                emotionalState: 'CALM',
+                lastKnownFood: [],
+                knownThreats: [],
+                dangerMap: [],
+                visitedRegions: [],
+                safeZones: [],
+                lastDangerArea: null,
+                currentPath: null
+            },
+            needs: {
+                hunger: 0,
+                energy: 100,
+                stress: 0,
+                fear: 0,
+                fatigue: 0,
+                curiosity: 50,
+                confidence: 50
+            },
             handleStrategyInput: (data) => {
                 if (data && data.type === "STRATEGY_UPDATE") {
-                    newAgent.strategy = data.strategy;
+                    newAgent.strategy = { ...newAgent.strategy, ...data.strategy };
                 }
             }
         };

@@ -19,18 +19,21 @@ class PerceptionSystem {
         const nearbyFood = foodManager.foodSpatialHashing.query(visionRect);
         bb.lastKnownFood = nearbyFood;
 
-        // Escaneia Agentes
-        const nearbyAgents = agentManager.agentSpatialHashing.query(visionRect);
+        // Escaneia Agentes (heads e body segments)
+        const nearbyEntities = agentManager.agentSpatialHashing.query(visionRect);
         bb.knownThreats = [];
         let localFear = 0;
 
-        for (const other of nearbyAgents) {
+        for (const entity of nearbyEntities) {
+            const other = entity.owner || entity;
             if (!other || other.id === agent.id) continue;
 
             // É uma ameaça se for maior (com vantagem definida na config)
             const advantage = config.game ? config.game.AI_ATTACK_SIZE_ADVANTAGE : 1.2;
             if (other.maxLength > agent.maxLength * advantage) {
-                bb.knownThreats.push(other);
+                if (!bb.knownThreats.some(t => t.id === other.id)) {
+                    bb.knownThreats.push(other);
+                }
                 localFear += 20; // Spike imediato de medo
             }
         }
