@@ -136,6 +136,96 @@ class Region {
         }
     }
 
+    simulateOfflineProgression(dt) {
+        const agents = this.agentManager.getAgents();
+        const bots = Object.values(agents).filter(a => a.isBot);
+        const humans = Object.values(agents).filter(a => !a.isBot);
+        const allAgents = [...bots, ...humans];
+
+        if (allAgents.length === 0) return;
+
+        allAgents.forEach(agent => {
+            if (agent.isDead) return;
+
+            // 1. Simular as Necessidades (needs) baseadas na estratégia
+            const hungerRate = 0.5;
+            const energyRate = 0.2;
+            agent.needs.hunger = Math.min(100, (agent.needs.hunger || 0) + hungerRate * dt);
+            agent.needs.energy = Math.max(0, (agent.needs.energy || 100) - energyRate * dt);
+
+            // 2. Simular Crescimento (alimentação) com base na estratégia
+            const aggressionNorm = (agent.strategy.aggression > 1) ? (agent.strategy.aggression / 100) : (agent.strategy.aggression || 0.5);
+            const huntSuccessProbability = 0.2 + aggressionNorm * 0.3;
+            if (Math.random() < huntSuccessProbability * (dt / 5)) {
+                const foodGained = Math.floor(Math.random() * 3) + 1;
+                agent.maxLength += foodGained;
+                agent.needs.hunger = Math.max(0, agent.needs.hunger - foodGained * 15);
+                agent.needs.energy = Math.min(100, agent.needs.energy + foodGained * 8);
+            }
+
+            // 3. Simular Fadiga e Envelhecimento
+            if (agent.needs.hunger >= 90) {
+                agent.maxLength = Math.max(5, agent.maxLength - 1);
+                if (agent.maxLength <= 5) {
+                    this.logger.info(`Agent ${agent.nickname} died of starvation during offline progression.`);
+                    this.killAgent(agent);
+                    return;
+                }
+            }
+
+            // 4. Simular Movimentação estratégica simples
+            const speed = agent.speed || 4.0;
+            agent.angle += (Math.random() - 0.5) * 0.4;
+            agent.x += Math.cos(agent.angle) * speed * dt;
+            agent.y += Math.sin(agent.angle) * speed * dt;
+
+            // Limitar coordenadas ao tamanho do mapa (borda circular)
+            const distFromCenter = Math.hypot(agent.x, agent.y);
+            if (distFromCenter > WORLD_SIZE / 2 - 100) {
+                agent.angle = Math.atan2(-agent.y, -agent.x);
+                agent.x = Math.cos(agent.angle) * (WORLD_SIZE / 2 - 200);
+                agent.y = Math.sin(agent.angle) * (WORLD_SIZE / 2 - 200);
+            }
+
+            // Atualizar histórico de cabeça e corpo de forma simplificada
+            agent.headHistory.addFirst({ x: agent.x, y: agent.y, timestamp: Date.now() });
+            agent.body.addFirst({ x: agent.x, y: agent.y });
+            while (agent.body.length > agent.maxLength) {
+                agent.body.removeLast();
+            }
+        });
+
+        // 5. Simular Conflitos/Combate simples por proximidade
+        for (let i = 0; i < allAgents.length; i++) {
+            const agentA = allAgents[i];
+            if (agentA.isDead) continue;
+
+            for (let j = i + 1; j < allAgents.length; j++) {
+                const agentB = allAgents[j];
+                if (agentB.isDead) continue;
+
+                const dist = Math.hypot(agentA.x - agentB.x, agentA.y - agentB.y);
+                if (dist < 150) {
+                    const scoreA = agentA.maxLength * (0.5 + (agentA.strategy.aggression || 0.5));
+                    const scoreB = agentB.maxLength * (0.5 + (agentB.strategy.aggression || 0.5));
+
+                    if (Math.abs(scoreA - scoreB) > 5) {
+                        if (scoreA > scoreB) {
+                            this.logger.info(`Agent ${agentA.nickname} defeated ${agentB.nickname} in offline combat.`);
+                            this.killAgent(agentB);
+                        } else {
+                            this.logger.info(`Agent ${agentB.nickname} defeated ${agentA.nickname} in offline combat.`);
+                            this.killAgent(agentA);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Atualizar persistência
+        this.persistenceSystem.update(this.agentManager.getAgents());
+    }
+
     tick() {
         if (!this.isReady) return;
         const tickStartTime = process.hrtime.bigint();

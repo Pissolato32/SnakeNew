@@ -12,6 +12,7 @@ class WorldManager {
         this.regions = new Map();
         this.networkManager = new NetworkManager(io, this);
         this.isSleeping = false;
+        this.lastBackgroundTick = Date.now();
         this.logger.info('WorldManager initialized to manage regions');
     }
 
@@ -53,10 +54,6 @@ class WorldManager {
             // Mas para o MVP de refatoração, vamos apenas remover o socket dos observers.
             this.logger.info(`Strategist ${socket.id} disconnected from region ${region.id}`);
 
-            // Opcional: Se quisermos matar o agente quando desconecta (temporário).
-            // region.removeAgent(socket.id);
-            // region.agentManager.setAgentOffline(socket.id);
-
             // Não deletamos mais a region, pois ela é persistente.
         }
     }
@@ -80,6 +77,18 @@ class WorldManager {
                     }
                 }
             }
+            
+            // Simular progressão estratégica offline a cada 5 segundos
+            const now = Date.now();
+            if (now - this.lastBackgroundTick >= 5000) {
+                const dt = (now - this.lastBackgroundTick) / 1000;
+                this.lastBackgroundTick = now;
+                for (const region of this.regions.values()) {
+                    if (region.isReady) {
+                        region.simulateOfflineProgression(dt);
+                    }
+                }
+            }
             return;
         }
 
@@ -87,6 +96,7 @@ class WorldManager {
             this.isSleeping = false;
             this.logger.info('Active connection detected. Waking up world simulation!');
         }
+        this.lastBackgroundTick = Date.now();
 
         for (const region of this.regions.values()) {
             region.tick();
