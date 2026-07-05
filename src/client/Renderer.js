@@ -33,12 +33,12 @@ class Renderer {
         this.gameCanvas.height = window.innerHeight;
         this.backgroundCanvas.width = window.innerWidth;
         this.backgroundCanvas.height = window.innerHeight;
-        
+
         if (this.minimapCanvas) {
             this.minimapCanvas.width = 200;
             this.minimapCanvas.height = 200;
         }
-        
+
         this.drawStaticBackground();
     }
 
@@ -57,7 +57,7 @@ class Renderer {
         this.ctx.clearRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
 
         const self = this.gameState.getPlayer(this.gameState.selfId);
-        
+
         if (!self) {
             this.ctx.restore();
             return;
@@ -75,35 +75,39 @@ class Renderer {
         const right = this.camera.x + halfW * 1.5;
         const top = this.camera.y - halfH * 1.5;
         const bottom = this.camera.y + halfH * 1.5;
-        
+
         const inView = (x, y, r = 0) => x + r >= left && x - r <= right && y + r >= top && y - r <= bottom;
 
+        const danceTime = Date.now() / 1000 * 0.5;
+
         this.gameState.food.forEach(f => {
-            if (inView(f.x, f.y, f.radius)) this.drawFood(f);
+            if (inView(f.x, f.y, f.radius)) this.drawFood(f, danceTime);
         });
         this.gameState.powerups.forEach(p => {
             if (inView(p.x, p.y, p.radius)) this.drawPowerUp(p);
         });
-        this.gameState.players.forEach(p => this.drawCreature(p));
+
+        this.gameState.players.forEach(p => {
+            if (p.isDead) return;
+            if (inView(p.x, p.y, (p.radius || 0) * 2 + 200)) this.drawCreature(p);
+        });
 
         this.drawParticles();
 
         this.ctx.restore();
-        
-        this.drawMinimap();
     }
 
     drawWorld() {
         const gridSize = 200;
         const halfWorld = this.gameState.worldSize / 2;
-        
+
         const halfW = (this.gameCanvas.width / this.camera.zoom) / 2;
         const halfH = (this.gameCanvas.height / this.camera.zoom) / 2;
         const left = Math.max(-halfWorld, this.camera.x - halfW - gridSize);
         const right = Math.min(halfWorld, this.camera.x + halfW + gridSize);
         const top = Math.max(-halfWorld, this.camera.y - halfH - gridSize);
         const bottom = Math.min(halfWorld, this.camera.y + halfH + gridSize);
-        
+
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
         this.ctx.lineWidth = 1;
         this.ctx.beginPath();
@@ -116,7 +120,7 @@ class Renderer {
             this.ctx.moveTo(left, y);
             this.ctx.lineTo(right, y);
         }
-        
+
         this.ctx.stroke();
 
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
@@ -132,19 +136,18 @@ class Renderer {
         this.backgroundCtx.fillRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
     }
 
-    drawFood(f) {
+    drawFood(f, danceTime) {
         this.ctx.fillStyle = f.color;
         this.ctx.beginPath();
-        
+
         let dx = 0;
         let dy = 0;
         if (f.type !== 'butterfly') {
-            const time = Date.now() / 1000 * 0.5; // match FOOD_DANCE_SPEED
-            const danceOffset = (f.x * 7 + f.y * 13) % (2 * Math.PI); // deterministic offset based on coordinates
-            dx = Math.cos(time + danceOffset) * 2.5; // match FOOD_DANCE_RADIUS
-            dy = Math.sin(time + danceOffset) * 2.5;
+            const danceOffset = (f.x * 7 + f.y * 13) % (2 * Math.PI);
+            dx = Math.cos(danceTime + danceOffset) * 2.5;
+            dy = Math.sin(danceTime + danceOffset) * 2.5;
         }
-        
+
         this.ctx.arc(f.x + dx, f.y + dy, f.radius, 0, Math.PI * 2);
         this.ctx.fill();
     }
@@ -168,11 +171,6 @@ class Renderer {
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
 
-        if (p.body.length === 0) {
-            this.ctx.restore();
-            return;
-        }
-
         const head = p.body.get(0);
         if (!head) {
             this.ctx.restore();
@@ -180,7 +178,7 @@ class Renderer {
         }
 
         let baseColor = p.color;
-        let borderColor = this.adjustColorBrightness(p.color, -30);
+        let borderColor;
 
         if (p.skin === 'rainbow') {
             p.hue = (Date.now() / 10) % 360;
@@ -189,11 +187,16 @@ class Renderer {
         } else if (p.skin === 'galaxy') {
             baseColor = '#191970';
             borderColor = '#000033';
+        } else {
+            if (p._colorDirty || !p._borderColor) {
+                p._borderColor = this.adjustColorBrightness(p.color, -30);
+                p._colorDirty = false;
+            }
+            borderColor = p._borderColor;
         }
 
-        // Draw Creature body
         this.ctx.strokeStyle = borderColor;
-        this.ctx.lineWidth = p.radius * 2 + 2; // Border width
+        this.ctx.lineWidth = p.radius * 2 + 2;
         this.ctx.beginPath();
         this.ctx.moveTo(p.body.get(0).x, p.body.get(0).y);
         for (let i = 1; i < p.body.length; i++) {
@@ -203,7 +206,7 @@ class Renderer {
         this.ctx.stroke();
 
         this.ctx.strokeStyle = baseColor;
-        this.ctx.lineWidth = p.radius * 2; // Inner Creature width
+        this.ctx.lineWidth = p.radius * 2;
         this.ctx.beginPath();
         this.ctx.moveTo(p.body.get(0).x, p.body.get(0).y);
         for (let i = 1; i < p.body.length; i++) {
@@ -212,7 +215,6 @@ class Renderer {
         }
         this.ctx.stroke();
 
-        // Draw head
         this.ctx.fillStyle = borderColor;
         this.ctx.beginPath();
         this.ctx.arc(head.x, head.y, p.radius + 1, 0, Math.PI * 2);
@@ -251,11 +253,12 @@ class Renderer {
         this.ctx.restore();
 
         this.ctx.save();
-        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.shadowBlur = 3;
-        this.ctx.fillStyle = 'white';
         this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'center';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.strokeText(p.nickname, head.x, head.y - p.radius - 15);
+        this.ctx.fillStyle = 'white';
         this.ctx.fillText(p.nickname, head.x, head.y - p.radius - 15);
         this.ctx.restore();
     }
@@ -321,13 +324,12 @@ class Renderer {
         this.minimapCtx.fillStyle = '#000000';
         this.minimapCtx.fillRect(0, 0, size, size);
 
-        // Draw food as simple dots
         this.gameState.food.forEach(f => {
             const miniX = ((f.x + halfWorld) * scale);
             const miniY = ((f.y + halfWorld) * scale);
             this.minimapCtx.fillStyle = f.color;
             this.minimapCtx.beginPath();
-            this.minimapCtx.arc(miniX, miniY, 1, 0, Math.PI * 2); // Smaller radius for minimap food
+            this.minimapCtx.arc(miniX, miniY, 1, 0, Math.PI * 2);
             this.minimapCtx.fill();
         });
 

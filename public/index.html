@@ -95,9 +95,16 @@
     <canvas id="minimapCanvas"></canvas>
 
     <div id="debug-panel" class="hidden">
-        <h3>Performance Data</h3>
-        <p>FPS: <span id="fps">0</span></p>
-        <p>Ping: <span id="ping">0</span>ms</p>
+        <div class="profiler-header">Performance Data (Ctrl+Shift+R reset / Ctrl+Shift+E export CSV)</div>
+        <p>FPS (avg): <span id="fpsValue">0</span></p>
+        <p>FPS (1% low): <span id="p1LowFpsValue">0</span></p>
+        <p>Frame time (avg): <span id="frameTimeValue">0</span></p>
+        <p>Update (interpolation): <span id="updateTimeValue">0</span></p>
+        <p>Render (draw): <span id="renderTimeValue">0</span></p>
+        <p>Dropped frames: <span id="droppedFramesValue">0</span></p>
+        <p>Ping (RTT): <span id="networkLatencyValue">0</span></p>
+        <p>Memory (JS heap): <span id="memoryUsageValue">0</span></p>
+        <p>Bots: <span id="debugBotCount">0</span></p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>

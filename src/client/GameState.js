@@ -17,6 +17,13 @@ class GameState {
         this.worldSize = size;
     }
 
+    reset() {
+        this.players.clear();
+        this.food.clear();
+        this.powerups.clear();
+        this.selfId = null;
+    }
+
     getPlayer(id) {
         return this.players.get(id);
     }
@@ -29,64 +36,69 @@ class GameState {
 
     updatePlayers(playersA, playersB, t) {
         const seenPlayers = new Set();
+        const mapA = new Map();
+        for (let i = 0; i < playersA.length; i++) {
+            mapA.set(playersA[i].id, playersA[i]);
+        }
 
         for (const pB of playersB) {
-            const pA = playersA.find(p => p.id === pB.id);
+            const pA = mapA.get(pB.id);
             let player = this.players.get(pB.id);
 
             if (!player) {
-                player = { body: new CircularBuffer(1000) }; // Create new player object
+                player = { body: new CircularBuffer(1000) };
                 this.players.set(pB.id, player);
             }
-            
+
             seenPlayers.add(pB.id);
 
             if (pA) {
-                // Interpolate properties
                 player.x = this.lerp(pA.x, pB.x, t);
                 player.y = this.lerp(pA.y, pB.y, t);
                 player.angle = this.slerp(pA.angle, pB.angle, t);
-                
-                // Interpolate body segments for smooth Creature animation
+
                 const bodyA = pA.s || [];
                 const bodyB = pB.s || [];
                 const maxLength = Math.max(bodyA.length, bodyB.length);
-                const newBody = [];
-                for(let i = 0; i < maxLength; i++) {
-                    const segA = bodyA[i] || bodyA[bodyA.length - 1]; // Use last segment if A is shorter
-                    const segB = bodyB[i] || bodyB[bodyB.length - 1]; // Use last segment if B is shorter
-                    if(segA && segB) {
-                        newBody.push({
+
+                player.body.reset();
+
+                for (let i = maxLength - 1; i >= 0; i--) {
+                    const segA = bodyA[i] || bodyA[bodyA.length - 1];
+                    const segB = bodyB[i] || bodyB[bodyB.length - 1];
+                    if (segA && segB) {
+                        player.body.addFirst({
                             x: this.lerp(segA.x, segB.x, t),
                             y: this.lerp(segA.y, segB.y, t),
                         });
                     }
                 }
-                player.body.clear();
-                newBody.reverse().forEach(seg => player.body.addFirst(seg));
 
             } else {
-                // Player is new, just use state from B
                 player.x = pB.x;
                 player.y = pB.y;
                 player.angle = pB.angle;
-                player.body.clear();
-                (pB.s || []).reverse().forEach(seg => player.body.addFirst(seg));
+                player.body.reset();
+                const body = pB.s || [];
+                for (let i = body.length - 1; i >= 0; i--) {
+                    player.body.addFirst(body[i]);
+                }
             }
 
-            // Update non-interpolated properties directly from B
             player.id = pB.id;
             player.nickname = pB.n || pB.nickname;
             player.skin = pB.skin;
             player.radius = pB.radius;
-            player.color = pB.color;
+            if (player.color !== pB.color) {
+                player.color = pB.color;
+                player._colorDirty = true;
+            }
             player.isDead = !pB.a;
             player.maxLength = pB.sc;
             player.needs = pB.needs;
             player.blackboard = pB.blackboard;
         }
 
-        // Remove players that are no longer in the snapshot
         for (const id of this.players.keys()) {
             if (!seenPlayers.has(id)) {
                 this.players.delete(id);
@@ -96,8 +108,13 @@ class GameState {
 
     updateItems(itemMap, itemsA, itemsB, t) {
         const seenItems = new Set();
+        const mapA = new Map();
+        for (let i = 0; i < itemsA.length; i++) {
+            mapA.set(itemsA[i].id, itemsA[i]);
+        }
+
         for (const itemB of itemsB) {
-            const itemA = itemsA.find(i => i.id === itemB.id);
+            const itemA = mapA.get(itemB.id);
             let item = itemMap.get(itemB.id);
 
             if (!item) {

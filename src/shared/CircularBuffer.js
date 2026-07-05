@@ -76,6 +76,18 @@ class CircularBuffer {
     }
 
     /**
+     * Like clear(), but reuses the existing backing array instead of
+     * allocating a new one. Safe because addFirst()/removeLast() always
+     * overwrite slots before they are read again. Use this in hot paths
+     * (e.g. per-frame interpolation) to avoid GC pressure.
+     */
+    reset() {
+        this.length = 0;
+        this.head = 0;
+        this.tail = 0;
+    }
+
+    /**
      * Returns the current capacity of the buffer.
      * @returns {number}
      */
