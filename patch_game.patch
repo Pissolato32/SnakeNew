@@ -1,0 +1,13 @@
+--- src/client/game.js
++++ src/client/game.js.new
+@@ -19,6 +19,10 @@
+     init() {
+         this.setupEventHandlers();
+         this.socketClient.connect();
++
++        this.uiManager.onStrategyChange = (property, value) => {
++            this.inputManager.updateStrategy({ [property]: value });
++        };
+     }
+
+     setupEventHandlers() {

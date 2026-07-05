@@ -6,7 +6,7 @@ const movementSchema = z.object({
     isBoosting: z.boolean(),
     seq: z.number().optional()
 });
-const playerDataSchema = z.object({
+const agentDataSchema = z.object({
     nickname: nicknameSchema,
     skin: z.string().optional(),
     color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional()
@@ -31,9 +31,9 @@ class Validator {
         }
     }
 
-    static validatePlayerData(data) {
+    static validateAgentData(data) {
         try {
-            playerDataSchema.parse(data);
+            agentDataSchema.parse(data);
             return true;
         } catch (error) {
             return false;

@@ -13,7 +13,7 @@ export const POWERUP_SPAWN_INTERVAL_MS = 15000;
 export const MIN_POWERUPS = 5;
 export const FOOD_MAGNET_RADIUS = 200;
 export const FOOD_MAGNET_FORCE = 0.1;
-export const FOOD_MAGNET_FORCE_MULTIPLIER = 0.5; // Added this as it was used in Room.js
+export const FOOD_MAGNET_FORCE_MULTIPLIER = 0.5; // Added this as it was used in Region.js
 export const BASE_SPEED_MIN = 3.5;
 export const BASE_SPEED_MAX_INITIAL = 4;
 export const LENGTH_DIVISOR_SPEED = 50000;
@@ -24,16 +24,16 @@ export const BOOST_SPEED_MULTIPLIER = 1.8;
 export const BOOST_LENGTH_CONSUMPTION_RATE = 0.05;
 export const BOOST_FOOD_DROP_PROBABILITY = 0.1;
 export const BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP = 5;
-export const BOOST_FOOD_DROP_INTERVAL = 10; // Added this as it was used in Room.js
+export const BOOST_FOOD_DROP_INTERVAL = 10; // Added this as it was used in Region.js
 export const BOOST_LENGTH_CONSUMED_PER_DROP = 1;
 export const BOT_MANAGEMENT_INTERVAL_MS = 5000;
 export const MIN_BOT_COUNT = 5;
 export const BOT_COUNT_HUMAN_MULTIPLIER = 2;
 export const BOT_SCORE_DIFFERENCE_FACTOR = 1.5;
 export const BOT_SCORE_DIFFERENCE_BONUS = 3;
-export const SNAKE_SEGMENT_RADIUS = 6; // New constant for snake body segment radius
+export const Creature_SEGMENT_RADIUS = 6; // New constant for Creature body segment radius
 export const FOOD_COLLISION_BUFFER = 5; // Food collision distance adjustment
-export const MAX_PLAYER_RADIUS = 20; // Max radius for a player
+export const MAX_PLAYER_RADIUS = 20; // Max radius for a agent
 export const RADIUS_GAIN_FACTOR = 0.1; // How much radius increases per score point
 
 // AI Constants
@@ -64,16 +64,16 @@ export const BASE_POWERUP_TYPES = [
     { type: 'FOOD_MAGNET', color: '#FFFFFF', radius: 12 }
 ];
 
-// Player and Snake Constants
-export const PLAYER_SPATIAL_HASH_CELL_SIZE = 100;
+// Agent and Creature Constants
+export const AGENT_SPATIAL_HASH_CELL_SIZE = 100;
 export const POWERUP_SPATIAL_HASH_CELL_SIZE = 100;
 export const DEFAULT_PLAYER_COLORS = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
-export const SNAKE_BODY_BUFFER_SIZE = 200;
-export const SNAKE_HEAD_HISTORY_SIZE = 10;
-export const INITIAL_SNAKE_LENGTH = 10;
-export const INITIAL_SNAKE_RADIUS = 8;
-export const INITIAL_SNAKE_TURN_RATE = 0.1;
-export const INITIAL_SNAKE_SPEED = 4;
+export const Creature_BODY_BUFFER_SIZE = 200;
+export const Creature_HEAD_HISTORY_SIZE = 10;
+export const INITIAL_Creature_LENGTH = 10;
+export const INITIAL_Creature_RADIUS = 8;
+export const INITIAL_Creature_TURN_RATE = 0.1;
+export const INITIAL_Creature_SPEED = 4;
 
 // Death Mechanics
 export const DEATH_FOOD_DROP_STEP = 5;
@@ -87,7 +87,7 @@ export const DYNAMIC_FOOD_TARGET_BASE = 500;
 export const DYNAMIC_FOOD_TARGET_PER_PLAYER = 75;
 
 // Network Constants (Server-side)
-export const MAX_PLAYERS = 100; // Maximum concurrent players
+export const MAX_PLAYERS = 100; // Maximum concurrent agents
 export const CONNECTION_TIMEOUT_MS = 5000; // Connection timeout
 export const PING_INTERVAL_MS = 2000; // Ping interval for latency measurement
 export const MAX_INPUTS_PER_SECOND = 20; // Rate limiting for client inputs (20 Hz)

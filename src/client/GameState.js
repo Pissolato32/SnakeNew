@@ -47,7 +47,7 @@ class GameState {
                 player.y = this.lerp(pA.y, pB.y, t);
                 player.angle = this.slerp(pA.angle, pB.angle, t);
                 
-                // Interpolate body segments for smooth snake animation
+                // Interpolate body segments for smooth Creature animation
                 const bodyA = pA.s || [];
                 const bodyB = pB.s || [];
                 const maxLength = Math.max(bodyA.length, bodyB.length);

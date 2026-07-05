@@ -1,311 +1,193 @@
-/* =================================================================================
-// style.css - Styles for a slither.io style game
-// ================================================================================= */
-
 body, html {
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    width: 100%;
     height: 100%;
-    background-color: #1a1a1a;
-    font-family: 'Arial', sans-serif;
-    touch-action: none;
+    overflow: hidden;
+    background-color: #0b0c10;
+    font-family: 'Courier New', Courier, monospace;
+    color: #c5c6c7;
 }
 
-canvas:not(#minimapCanvas) {
-    display: none; /* Hidden by default */
+#gameCanvas {
+    display: block;
     width: 100%;
     height: 100%;
     position: absolute;
     top: 0;
     left: 0;
+    z-index: 1;
 }
 
-/* Login Screen */
-#loginScreen {
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(17, 17, 17, 1);
-    z-index: 100;
+    background: rgba(11, 12, 16, 0.9);
+    z-index: 10;
 }
 
-#deathScreen {
-    display: none; /* Hidden by default */
-    justify-content: center; /* Added from original #loginScreen, #deathScreen */
-    align-items: center; /* Added from original #loginScreen, #deathScreen */
-    position: absolute; /* Added from original #loginScreen, #deathScreen */
-    top: 0; /* Added from original #loginScreen, #deathScreen */
-    left: 0; /* Added from original #loginScreen, #deathScreen */
-    width: 100%; /* Added from original #loginScreen, #deathScreen */
-    height: 100%; /* Added from original #loginScreen, #deathScreen */
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 100; /* Added from original #loginScreen, #deathScreen */
+.hidden {
+    display: none !important;
 }
 
 .login-box, .death-box {
-    text-align: center;
-    color: white;
-    background-color: #1a1a1a;
+    background: #1f2833;
     padding: 40px;
-    border-radius: 20px;
+    border-radius: 8px;
+    border: 2px solid #45a29e;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(69, 162, 158, 0.5);
 }
 
-.login-box h1 {
-    font-size: 5em;
-    color: #4CAF50;
-    margin-bottom: 20px;
-}
+h1 { color: #66fcf1; margin-top: 0; }
+h2 { color: #c5c6c7; margin-top: 0; font-size: 16px; }
 
-#nicknameInput {
-    width: 300px;
-    padding: 15px;
-    font-size: 1.2em;
-    border: 2px solid #4CAF50;
-    background: #333;
-    color: white;
-    border-radius: 5px;
-    margin-bottom: 15px;
-}
-
-.skin-selector {
-    margin-bottom: 20px;
-    text-align: left;
-}
-
-.skin-selector label {
-    display: block;
-    color: white;
-    font-size: 1.1em;
-    margin-bottom: 5px;
-}
-
-#skinSelect {
-    width: 300px;
+input[type="text"] {
+    width: 80%;
     padding: 10px;
-    font-size: 1.1em;
-    border: 2px solid #4CAF50;
-    background: #333;
-    color: white;
-    border-radius: 5px;
+    margin: 10px 0;
+    background: #0b0c10;
+    border: 1px solid #45a29e;
+    color: #66fcf1;
+    border-radius: 4px;
+    text-align: center;
+}
+
+button {
+    background: #45a29e;
+    color: #0b0c10;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #66fcf1;
+    box-shadow: 0 0 10px #66fcf1;
+}
+
+.controls-row {
+    display: flex;
+    justify-content: space-around;
+    margin: 15px 0;
+}
+
+select {
+    padding: 5px;
+    background: #0b0c10;
+    color: #c5c6c7;
+    border: 1px solid #45a29e;
 }
 
 .color-selector {
-    display: none; /* Hidden by default */
+    display: flex;
     align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-    gap: 15px;
 }
 
-.color-display {
-    width: 40px;
-    height: 40px;
-    border: 2px solid #4CAF50;
-    border-radius: 5px;
-    transition: background-color 0.3s;
+.color-selector button {
+    margin: 0 10px;
+    padding: 5px 10px;
 }
 
-.arrow-button {
-    font-size: 1.5em;
-    background: none;
-    border: 1px solid #4CAF50;
-    color: #4CAF50;
-    border-radius: 5px;
-    width: 44px; /* Match height of color-display */
-    height: 44px;
-    cursor: pointer;
-    transition: all 0.2s;
+#colorDisplay {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #c5c6c7;
 }
 
-.arrow-button:hover {
-    background: #4CAF50;
-    color: white;
-}
-
-#playButton, #playAgainButton {
-    padding: 15px 40px;
-    font-size: 1.5em;
-    color: white;
-    background-color: #4CAF50;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-#playButton:hover, #playAgainButton:hover {
-    background-color: #45a049;
-}
-
-.death-box {
-     border: 2px solid #FF5722;
-     box-shadow: 0 0 20px rgba(255, 87, 34, 0.5);
-}
-
-.death-box h1 {
-    font-size: 4em;
-    color: #FF5722;
-    margin-bottom: 10px;
-}
-
-.death-box p {
-    font-size: 1.5em;
-    margin-bottom: 30px;
-}
-
-
-/* Game UI */
+/* Dashboard UI */
 #gameUI {
-    display: none; /* Hidden by default */
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    color: white;
-    pointer-events: none; /* Allow mouse events to pass through to the canvas */
+    pointer-events: none;
+    z-index: 5;
+}
+
+#dashboard {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(31, 40, 51, 0.8);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #45a29e;
+    pointer-events: auto;
+    width: 300px;
+}
+
+#dashboard h3, #dashboard h4 {
+    margin: 5px 0;
+    color: #66fcf1;
+}
+
+.stat-box { margin-bottom: 15px; }
+
+.progress-container {
+    margin-bottom: 10px;
+}
+.progress-container label {
+    font-size: 12px;
+}
+.progress-bar {
+    width: 100%;
+    height: 10px;
+    background: #0b0c10;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.slider-container {
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+.slider-container input {
+    width: 100%;
+}
+
+#blackboardState {
+    font-size: 14px;
+    color: #c5c6c7;
+    background: #0b0c10;
+    padding: 5px;
+    border-left: 3px solid #66fcf1;
 }
 
 #leaderboard {
     position: absolute;
     top: 20px;
-    left: 20px;
-    background-color: rgba(0, 0, 0, 0.4);
+    right: 20px;
+    background: rgba(31, 40, 51, 0.8);
     padding: 15px;
-    border-radius: 10px;
-    width: 250px;
-}
-
-#leaderboard h2 {
-    margin: 0 0 10px 0;
-    text-align: center;
-    font-size: 1.5em;
+    border-radius: 8px;
+    border: 1px solid #45a29e;
 }
 
 #leaderboardList {
-    list-style: none;
-    padding: 0;
+    padding-left: 20px;
     margin: 0;
 }
 
-#leaderboardList li {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px 0;
-    font-size: 1.1em;
-}
-
-#score {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.4);
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 1.2em;
-}
-
-#minimapCanvas {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: transparent;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 30px rgba(76, 175, 80, 0.4);
-    z-index: 999;
-    pointer-events: none;
-    display: none;
-}
-
-/* Debug Panel Styles */
 #debug-panel {
-    position: fixed;
+    position: absolute;
     top: 20px;
     left: 20px;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: #00ff00;
-    border: 1px solid #00ff00;
-    border-radius: 5px;
-    padding: 15px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 14px;
-    z-index: 1000;
-    width: 350px;
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
-    display: none; /* Hidden by default */
-    cursor: move;
-}
-
-#debug-panel .profiler-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #00ff00;
-}
-
-#debug-panel h2 {
-    margin: 0;
-    font-size: 16px;
-}
-
-#debug-panel .close-button {
-    background: none;
-    border: 1px solid #00ff00;
-    color: #00ff00;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 2px 8px;
-    border-radius: 3px;
-}
-
-#debug-panel .close-button:hover {
-    background-color: #00ff00;
-    color: #000;
-}
-
-#debug-panel .profiler-metrics {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-#debug-panel .metric-group {
-    margin-bottom: 10px;
-}
-
-#debug-panel .metric-group h3 {
-    font-size: 14px;
-    color: #00cc00;
-    margin: 0 0 5px 0;
-    border-bottom: 1px solid #008800;
-    padding-bottom: 3px;
-}
-
-#debug-panel .metric-item {
-    display: flex;
-    justify-content: space-between;
-}
-
-#debug-panel .metric-item span:first-child {
-    color: #00cc00;
-}
-
-#debug-panel .metric-item span:last-child {
-    font-weight: bold;
-}
-
-#profilerChart {
-    margin-top: 10px;
-    width: 100%;
+    background: rgba(0,0,0,0.7);
+    padding: 10px;
+    font-size: 12px;
 }

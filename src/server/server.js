@@ -38,12 +38,12 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../../public', 'index.html'));
 });
 
-// Import GameManager
-import GameManager from './GameManager.js';
+// Import WorldManager
+import WorldManager from './WorldManager.js';
 import HealthCheck from './HealthCheck.js';
 
-const gameManager = new GameManager(io);
-const healthCheck = new HealthCheck(gameManager);
+const worldManager = new WorldManager(io);
+const healthCheck = new HealthCheck(worldManager);
 
 app.get('/health', (req, res) => {
     const status = healthCheck.getHealthStatus();
@@ -51,16 +51,16 @@ app.get('/health', (req, res) => {
 });
 
 async function main() {
-    await gameManager.start(); // Initialize the world
+    await worldManager.start(); // Initialize the world
 
     // Game simulation loop
     setInterval(() => {
-        gameManager.tick();
+        worldManager.tick();
     }, GAME_TICK_RATE_MS);
 
     // Snapshot broadcast loop
     setInterval(() => {
-        gameManager.sendSnapshots();
+        worldManager.sendSnapshots();
     }, 1000 / SNAPSHOT_RATE_HZ);
 }
 

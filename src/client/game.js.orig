@@ -25,10 +25,6 @@ class GameClient {
     init() {
         this.setupEventHandlers();
         this.socketClient.connect();
-
-        this.uiManager.onStrategyChange = (property, value) => {
-            this.inputManager.updateStrategy({ [property]: value });
-        };
     }
 
     setupEventHandlers() {
@@ -54,7 +50,7 @@ class GameClient {
             this.renderer.gameCanvas.style.opacity = '0.3';
             this.pendingInputs = []; // Clear pending inputs on death
         };
-        
+
         this.socketClient.onPong = (ping) => {
             this.perfMonitor.updateNetworkLatency(ping);
         };
@@ -91,7 +87,7 @@ class GameClient {
 
         this.processInputs();
         this.renderInterpolatedState();
-        
+
         this.uiManager.updateScoreAndLeaderboard(this.gameState.players, this.gameState.selfId);
         const input = this.inputManager.getInput();
         this.uiManager.toggleDebugPanel(input.showDebugPanel);
@@ -117,13 +113,13 @@ class GameClient {
 
         const inputPayload = { angle: targetAngle, isBoosting: input.isBoosting };
         const seq = this.socketClient.sendInput(inputPayload);
-        
+
         this.pendingInputs.push({ seq, ...inputPayload });
-        
+
         // Client-side prediction
         this.predictMovement(self, inputPayload);
     }
-    
+
     predictMovement(player, input) {
         // Simplified prediction based on user input
         player.angle = input.angle;
@@ -156,8 +152,8 @@ class GameClient {
 
     renderInterpolatedState() {
         const renderTimestamp = performance.now() - INTERPOLATION_BUFFER_MS;
-        
-        const snapshotAIndex = this.snapshotBuffer.findIndex((s, i) => 
+
+        const snapshotAIndex = this.snapshotBuffer.findIndex((s, i) =>
             s.timestamp <= renderTimestamp && this.snapshotBuffer[i+1] && this.snapshotBuffer[i+1].timestamp > renderTimestamp
         );
 
@@ -170,14 +166,14 @@ class GameClient {
 
         const snapshotA = this.snapshotBuffer[snapshotAIndex];
         const snapshotB = this.snapshotBuffer[snapshotAIndex + 1];
-        
+
         const timeDiff = snapshotB.timestamp - snapshotA.timestamp;
         const renderDiff = renderTimestamp - snapshotA.timestamp;
         const t = timeDiff > 0 ? renderDiff / timeDiff : 0;
 
         // Update GameState with all players/entities for rendering
         this.gameState.updateFromSnapshot(snapshotA, snapshotB, t);
-        
+
         this.renderer.updateCamera();
         this.renderer.draw();
     }

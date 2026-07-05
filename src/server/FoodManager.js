@@ -11,7 +11,7 @@ class FoodManager {
         this.logger = logger;
     }
 
-    createFood(x, y, typeIndex, players, spawnBuffer) {
+    createFood(x, y, typeIndex, agents, spawnBuffer) {
         let foodItem;
         if (this.foodPool.length > 0) {
             foodItem = this.foodPool.pop();
@@ -22,7 +22,7 @@ class FoodManager {
         const foodType = typeIndex !== undefined ? config.game.FOOD_TYPES[typeIndex] : config.game.FOOD_TYPES[Math.floor(Math.random() * config.game.FOOD_TYPES.length)];
         let spawnPoint = { x, y };
         if (x === undefined || y === undefined) {
-            spawnPoint = getSafeSpawnPoint(players, spawnBuffer);
+            spawnPoint = getSafeSpawnPoint(agents, spawnBuffer);
         }
 
         foodItem.x = spawnPoint.x;
@@ -56,10 +56,10 @@ class FoodManager {
         }
     }
 
-    addFoodInBatch(count, players, spawnBuffer) {
+    addFoodInBatch(count, agents, spawnBuffer) {
         for (let i = 0; i < count; i++) {
             const foodTypeIndex = Math.random() < config.game.BUTTERFLY_SPAWN_CHANCE ? config.game.BUTTERFLY_FOOD_TYPE_INDEX : undefined;
-            const foodItem = this.createFood(undefined, undefined, foodTypeIndex, players, spawnBuffer);
+            const foodItem = this.createFood(undefined, undefined, foodTypeIndex, agents, spawnBuffer);
             this.addFood(foodItem);
         }
     }

@@ -1,11 +1,11 @@
 class AntiCheat {
     constructor(logger) {
         this.logger = logger;
-        this.playerHistory = new Map(); // playerId -> history of positions
+        this.agentHistory = new Map(); // agentId -> history of positions
     }
 
-    detectSpeedHack(player) {
-        const history = this.playerHistory.get(player.id);
+    detectSpeedHack(agent) {
+        const history = this.agentHistory.get(agent.id);
         if (!history || history.length < 2) return false;
 
         const recent = history.slice(-10); // Last 10 positions
@@ -22,14 +22,14 @@ class AntiCheat {
         const maxAllowedSpeed = 10; // Adjust based on game constants
 
         if (avgSpeed > maxAllowedSpeed) {
-            this.logger.warn(`Speed hack detected for player ${player.id}: ${avgSpeed}`);
+            this.logger.warn(`Speed hack detected for agent ${agent.id}: ${avgSpeed}`);
             return true;
         }
         return false;
     }
 
-    detectTeleport(player) {
-        const history = this.playerHistory.get(player.id);
+    detectTeleport(agent) {
+        const history = this.agentHistory.get(agent.id);
         if (!history || history.length < 2) return false;
 
         const last = history[history.length - 1];
@@ -39,20 +39,20 @@ class AntiCheat {
         const instantSpeed = dist / (time || 1);
 
         if (instantSpeed > 1000) { // Very high speed indicates teleport
-            this.logger.warn(`Teleport detected for player ${player.id}`);
+            this.logger.warn(`Teleport detected for agent ${agent.id}`);
             return true;
         }
         return false;
     }
 
-    updatePlayerHistory(player) {
-        if (!this.playerHistory.has(player.id)) {
-            this.playerHistory.set(player.id, []);
+    updateAgentHistory(agent) {
+        if (!this.agentHistory.has(agent.id)) {
+            this.agentHistory.set(agent.id, []);
         }
-        const history = this.playerHistory.get(player.id);
+        const history = this.agentHistory.get(agent.id);
         history.push({
-            x: player.x,
-            y: player.y,
+            x: agent.x,
+            y: agent.y,
             timestamp: Date.now()
         });
         // Keep only last 50 positions
