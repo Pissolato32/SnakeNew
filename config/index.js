@@ -48,6 +48,7 @@ import {
 
 const config = {
     PORT: process.env.PORT || 3000,
+    ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000', 'http://localhost:3002', 'http://127.0.0.1:3000', 'http://127.0.0.1:3002'],
     DEBUG_MODE: process.env.DEBUG_MODE === 'true' || false,
     BOT_COUNT: parseInt(process.env.BOT_COUNT, 10) || 10,
     WORLD_SIZE: parseInt(process.env.WORLD_SIZE, 10) || 30000,
