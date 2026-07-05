@@ -9,7 +9,7 @@ class SocketClient {
 
     connect() {
         const connectionUrl = window.location.hostname.includes('vercel.app')
-            ? 'http://localhost:3000'
+            ? 'https://snakenew.onrender.com'
             : undefined;
 
         this.socket = io(connectionUrl);
