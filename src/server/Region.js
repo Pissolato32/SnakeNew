@@ -153,7 +153,7 @@ class Region {
         const tickEndTime = process.hrtime.bigint();
         const tickDurationMs = Number(tickEndTime - tickStartTime) / 1_000_000; // Convert nanoseconds to milliseconds
         // Log tick duration if it exceeds a certain threshold or periodically
-        if (tickDurationMs > (1000 / GAME_TICK_RATE_MS)) {
+        if (tickDurationMs > 100) {
             this.logger.warn(`Region ${this.id} tick took too long: ${tickDurationMs.toFixed(2)}ms`);
         }
         // Optionally log every tick for detailed performance analysis
