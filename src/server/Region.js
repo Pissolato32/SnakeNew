@@ -5,6 +5,7 @@ import CollisionSystem from './CollisionSystem.js';
 import AIManager from './AIManager.js';
 import PersistenceSystem from './ecs/systems/PersistenceSystem.js';
 import AntiCheat from './AntiCheat.js';
+import config from '../../config/index.js';
 import {
     DYNAMIC_FOOD_TARGET_BASE,
     DYNAMIC_FOOD_TARGET_PER_PLAYER,
@@ -142,7 +143,7 @@ class Region {
             }
         }
 
-        const targetBotCount = Math.max(MIN_BOT_COUNT, (humanAgents.length * BOT_COUNT_HUMAN_MULTIPLIER) + scoreBonusBots);
+        const targetBotCount = Math.max(config.BOT_COUNT, (humanAgents.length * BOT_COUNT_HUMAN_MULTIPLIER) + scoreBonusBots);
 
         if (bots.length < targetBotCount) {
             this.agentManager.addBot();
