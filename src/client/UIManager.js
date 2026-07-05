@@ -69,9 +69,9 @@ class UIManager {
     }
 
     showGameUI() {
-        this.loginScreen.style.display = 'none';
+        this.loginScreen.classList.add('hidden');
         this.deathScreen.style.display = 'none';
-        this.gameUI.style.display = 'block';
+        this.gameUI.classList.remove('hidden');
         
         // Show the canvas elements
         const gameCanvas = document.getElementById('gameCanvas');
@@ -84,8 +84,8 @@ class UIManager {
 
     showDeathScreen(score) {
         this.finalScore.textContent = score;
-        this.deathScreen.style.display = 'flex';
-        this.gameUI.style.display = 'none';
+        this.deathScreen.classList.remove('hidden');
+        this.gameUI.classList.add('hidden');
     }
 
     updateScoreAndLeaderboard(players, selfId) {

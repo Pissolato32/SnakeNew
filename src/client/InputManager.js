@@ -1,24 +1,21 @@
 class InputManager {
     constructor(canvas) {
         this.canvas = canvas;
-        this.mouse = { x: 0, y: 0 };
-        this.isBoosting = false;
         this.showDebugPanel = false;
-        this.sequenceNumber = 0;
 
+        // Em vez de enviar coordenadas locais para movimento,
+        // o jogador enviará estratégias e metas
+        this.currentStrategy = {
+            aggression: 50,
+            caution: 50,
+            curiosity: 50
+        };
+
+        this.strategyChanged = false;
         this.setupListeners();
     }
 
     setupListeners() {
-        this.canvas.addEventListener('mousemove', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouse.x = e.clientX - rect.left;
-            this.mouse.y = e.clientY - rect.top;
-        });
-
-        this.canvas.addEventListener('mousedown', () => { this.isBoosting = true; });
-        this.canvas.addEventListener('mouseup', () => { this.isBoosting = false; });
-
         window.addEventListener('keydown', (e) => {
             if (e.key === 'd' && e.ctrlKey) {
                 e.preventDefault();
@@ -27,13 +24,22 @@ class InputManager {
         });
     }
 
+    // Chamado pela UI de Estratégia quando o usuário altera os sliders
+    updateStrategy(newStrategy) {
+        this.currentStrategy = { ...this.currentStrategy, ...newStrategy };
+        this.strategyChanged = true;
+    }
+
     getInput() {
-        this.sequenceNumber++;
+        if (!this.strategyChanged) {
+            return null;
+        }
+
+        this.strategyChanged = false;
+
         return {
-            mouse: this.mouse,
-            isBoosting: this.isBoosting,
-            showDebugPanel: this.showDebugPanel,
-            seq: this.sequenceNumber
+            type: 'STRATEGY_UPDATE',
+            strategy: this.currentStrategy
         };
     }
 }

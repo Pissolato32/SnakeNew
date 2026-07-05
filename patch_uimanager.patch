@@ -1,0 +1,63 @@
+--- src/client/UIManager.js
++++ src/client/UIManager.js.new
+@@ -14,6 +14,13 @@
+         this.prevColor = document.getElementById('prevColor');
+         this.nextColor = document.getElementById('nextColor');
+         this.debugPanel = document.getElementById('debug-panel');
++
++        this.energyValue = document.getElementById('energyValue');
++        this.energyBar = document.getElementById('energyBar');
++        this.hungerValue = document.getElementById('hungerValue');
++        this.hungerBar = document.getElementById('hungerBar');
++        this.blackboardState = document.getElementById('blackboardState');
++        this.strategySliders = ['aggression', 'caution', 'curiosity'];
+
+         this.solidColors = UI_SOLID_COLORS;
+         this.currentColorIndex = 0;
+@@ -48,6 +55,17 @@
+         this.prevColor.addEventListener('click', () => {
+             this.cycleColor(-1);
+         });
++
++        this.strategySliders.forEach(slider => {
++            const el = document.getElementById(`${slider}Slider`);
++            if (el) {
++                el.addEventListener('input', () => {
++                    if (this.onStrategyChange) {
++                        this.onStrategyChange(slider, parseInt(el.value));
++                    }
++                });
++            }
++        });
+     }
+
+     updateColorSelectorVisibility() {
+@@ -95,8 +113,8 @@
+     showDeathScreen(score) {
+         this.finalScore.textContent = score;
+-        this.deathScreen.style.display = 'flex';
+-        this.gameUI.style.display = 'none';
++        this.deathScreen.classList.remove('hidden');
++        this.gameUI.classList.add('hidden');
+     }
+
+     updateScoreAndLeaderboard(players, selfId) {
+@@ -107,6 +125,18 @@
+         }
+
+         this.updateLeaderboard(players, selfId);
++
++        if (self) {
++            if (self.needs) {
++                this.energyValue.textContent = Math.floor(self.needs.energy);
++                this.energyBar.style.width = `${self.needs.energy}%`;
++                this.hungerValue.textContent = Math.floor(self.needs.hunger);
++                this.hungerBar.style.width = `${self.needs.hunger}%`;
++            }
++            if (self.blackboard) {
++                this.blackboardState.textContent = `Goal: ${self.blackboard.currentGoal}`;
++            }
++        }
+     }
+
+     updateLeaderboard(players, selfId) {

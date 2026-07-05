@@ -1,14 +1,14 @@
 class HealthCheck {
-    constructor(gameManager) {
-        this.gameManager = gameManager;
+    constructor(WorldManager) {
+        this.WorldManager = WorldManager;
     }
 
     getHealthStatus() {
-        const uptime = this.gameManager.metrics.getUptime();
+        const uptime = this.WorldManager.metrics.getUptime();
         
-        let totalPlayerCount = 0;
-        for (const room of this.gameManager.rooms.values()) {
-            totalPlayerCount += Object.keys(room.playerManager.getPlayers()).length;
+        let totalAgentCount = 0;
+        for (const Region of this.WorldManager.Regions.values()) {
+            totalAgentCount += Object.keys(Region.agentManager.getAgents()).length;
         }
 
         const memoryUsage = process.memoryUsage();
@@ -16,8 +16,8 @@ class HealthCheck {
         return {
             status: 'healthy',
             uptime: uptime,
-            players: totalPlayerCount,
-            rooms: this.gameManager.rooms.size,
+            agents: totalAgentCount,
+            Regions: this.WorldManager.Regions.size,
             memory: {
                 rss: `${(memoryUsage.rss / 1024 / 1024).toFixed(2)} MB`,
                 heapUsed: `${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,

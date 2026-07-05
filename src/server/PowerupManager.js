@@ -3,10 +3,10 @@ import { getSafeSpawnPoint } from '../shared/Utils.js';
 import SpatialHashing from '../shared/SpatialHashing.js';
 
 class PowerupManager {
-    constructor(playerManager, logger) { // Needs playerManager to get players for safe spawn point
+    constructor(agentManager, logger) { // Needs agentManager to get agents for safe spawn point
         this.powerups = [];
         this.powerupPool = []; // Add powerup pool
-        this.playerManager = playerManager; // Store playerManager reference
+        this.agentManager = agentManager; // Store agentManager reference
         this.logger = logger;
         this.powerupSpatialHashing = new SpatialHashing(POWERUP_SPATIAL_HASH_CELL_SIZE);
     }
@@ -20,8 +20,8 @@ class PowerupManager {
         }
 
         const powerupType = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
-        // Pass players from playerManager to getSafeSpawnPoint
-        const spawnPoint = getSafeSpawnPoint(this.playerManager.players, this.playerManager.SPAWN_BUFFER); // SPAWN_BUFFER will be in PlayerManager
+        // Pass agents from agentManager to getSafeSpawnPoint
+        const spawnPoint = getSafeSpawnPoint(this.agentManager.agents, this.agentManager.SPAWN_BUFFER); // SPAWN_BUFFER will be in AgentManager
         
         // Assign properties to the powerupItem (reused or new)
         Object.assign(powerupItem, { 

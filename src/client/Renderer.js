@@ -84,7 +84,7 @@ class Renderer {
         this.gameState.powerups.forEach(p => {
             if (inView(p.x, p.y, p.radius)) this.drawPowerUp(p);
         });
-        this.gameState.players.forEach(p => this.drawSnake(p));
+        this.gameState.players.forEach(p => this.drawCreature(p));
 
         this.drawParticles();
 
@@ -166,7 +166,7 @@ class Renderer {
         this.ctx.stroke();
     }
 
-    drawSnake(p) {
+    drawCreature(p) {
         if (!p.body || p.body.length === 0) {
             return;
         }
@@ -198,7 +198,7 @@ class Renderer {
             borderColor = '#000033';
         }
 
-        // Draw snake body
+        // Draw Creature body
         this.ctx.strokeStyle = borderColor;
         this.ctx.lineWidth = p.radius * 2 + 2; // Border width
         this.ctx.beginPath();
@@ -210,7 +210,7 @@ class Renderer {
         this.ctx.stroke();
 
         this.ctx.strokeStyle = baseColor;
-        this.ctx.lineWidth = p.radius * 2; // Inner snake width
+        this.ctx.lineWidth = p.radius * 2; // Inner Creature width
         this.ctx.beginPath();
         this.ctx.moveTo(p.body.get(0).x, p.body.get(0).y);
         for (let i = 1; i < p.body.length; i++) {

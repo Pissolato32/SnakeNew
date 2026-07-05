@@ -13,7 +13,7 @@ export function hslToRgb(h, s, l) {
     return { r, g, b };
 }
 
-export function getSafeSpawnPoint(players, SPAWN_BUFFER) {
+export function getSafeSpawnPoint(agents, SPAWN_BUFFER) {
     let spawnPoint = { x: 0, y: 0 };
     let isSafe = false;
     let attempts = 0;
@@ -27,10 +27,10 @@ export function getSafeSpawnPoint(players, SPAWN_BUFFER) {
         };
         
         isSafe = true;
-        for (const id in players) {
-            const player = players[id];
-            if (player && !isNaN(player.x) && !isNaN(player.y)) {
-                const distance = Math.hypot(spawnPoint.x - player.x, spawnPoint.y - player.y);
+        for (const id in agents) {
+            const agent = agents[id];
+            if (agent && !isNaN(agent.x) && !isNaN(agent.y)) {
+                const distance = Math.hypot(spawnPoint.x - agent.x, spawnPoint.y - agent.y);
                 if (distance < SPAWN_BUFFER) {
                     isSafe = false;
                     break;

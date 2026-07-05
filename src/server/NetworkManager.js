@@ -2,10 +2,10 @@ import Validator from './Validator.js';
 import { MAX_INPUTS_PER_SECOND } from '../shared/Constants.js';
 
 class NetworkManager {
-    constructor(io, gameManager) {
+    constructor(io, WorldManager) {
         this.io = io;
-        this.gameManager = gameManager;
-        this.logger = gameManager.logger;
+        this.WorldManager = WorldManager;
+        this.logger = WorldManager.logger;
         this.lastInputTime = new Map(); // To store last input timestamp for each socket
     }
 
@@ -14,12 +14,12 @@ class NetworkManager {
             this.logger.info('A user connected:', socket.id);
 
             socket.on('join-game', (data) => {
-                if (!Validator.validatePlayerData(data)) {
-                    socket.emit('error', { message: 'Invalid player data' });
+                if (!Validator.validateAgentData(data)) {
+                    socket.emit('error', { message: 'Invalid agent data' });
                     return;
                 }
-                // GameManager will find/create a room and add the player
-                this.gameManager.findOrCreateRoom(socket, data);
+                // WorldManager will find/create a Region and add the agent
+                this.WorldManager.findOrCreateRegion(socket, data);
             });
 
             socket.on('input', (data) => {
@@ -37,23 +37,23 @@ class NetworkManager {
                     socket.emit('error', { message: 'Invalid input data' });
                     return;
                 }
-                // GameManager will find the player's room and forward the input
-                this.gameManager.handleInput(socket, data);
+                // WorldManager will find the agent's Region and forward the input
+                this.WorldManager.handleInput(socket, data);
             });
 
             socket.on('disconnect', () => {
                 this.logger.info('User disconnected:', socket.id);
                 this.lastInputTime.delete(socket.id); // Clean up
-                // GameManager will find the player's room and remove them
-                this.gameManager.handleDisconnect(socket);
+                // WorldManager will find the agent's Region and remove them
+                this.WorldManager.handleDisconnect(socket);
             });
 
             socket.on('ping', () => { socket.emit('pong'); });
 
             socket.on('pingUpdate', (ping) => {
-                const player = this.gameManager.findPlayerBySocketId(socket.id);
-                if (player) {
-                    player.ping = ping;
+                const agent = this.WorldManager.findAgentBySocketId(socket.id);
+                if (agent) {
+                    agent.ping = ping;
                 }
             });
         });

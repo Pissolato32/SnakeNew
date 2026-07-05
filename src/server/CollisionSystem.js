@@ -1,71 +1,71 @@
 import { 
     WORLD_SIZE, 
-    SNAKE_SEGMENT_RADIUS, 
+    Creature_SEGMENT_RADIUS,
     FOOD_COLLISION_BUFFER, 
     RADIUS_GAIN_FACTOR,
     MAX_PLAYER_RADIUS
 } from '../shared/Constants.js';
 
 class CollisionSystem {
-    constructor(playerManager, foodManager, powerupManager, room, logger) {
-        this.playerManager = playerManager;
+    constructor(agentManager, foodManager, powerupManager, Region, logger) {
+        this.agentManager = agentManager;
         this.foodManager = foodManager;
         this.powerupManager = powerupManager;
-        this.room = room;
+        this.Region = Region;
         this.logger = logger;
     }
 
-    _checkWorldBoundaryCollision(player, playersToKill) {
-        if (Math.hypot(player.x, player.y) > WORLD_SIZE / 2 - player.radius) {
-            playersToKill.add(player);
+    _checkWorldBoundaryCollision(agent, agentsToKill) {
+        if (Math.hypot(agent.x, agent.y) > WORLD_SIZE / 2 - agent.radius) {
+            agentsToKill.add(agent);
             return true;
         }
-        for (let i = 0; i < player.body.length; i++) {
-            const segment = player.body.get(i);
+        for (let i = 0; i < agent.body.length; i++) {
+            const segment = agent.body.get(i);
             if (!segment) continue;
             if (Math.hypot(segment.x, segment.y) > WORLD_SIZE / 2) {
-                this.logger.debug(`Player ${player.id} body segment ${i} out of bounds, killing player.`);
-                playersToKill.add(player);
+                this.logger.debug(`Agent ${agent.id} body segment ${i} out of bounds, killing agent.`);
+                agentsToKill.add(agent);
                 return true;
             }
         }
         return false;
     }
 
-    _checkPowerupCollision(player) {
-        const queryRadius = player.radius + 20; // Use a generous radius for the query
+    _checkPowerupCollision(agent) {
+        const queryRadius = agent.radius + 20; // Use a generous radius for the query
         const nearbyPowerups = this.powerupManager.powerupSpatialHashing.query({
-            x: player.x - queryRadius,
-            y: player.y - queryRadius,
+            x: agent.x - queryRadius,
+            y: agent.y - queryRadius,
             width: queryRadius * 2,
             height: queryRadius * 2,
         });
 
         for (const p of nearbyPowerups) {
-            if (Math.hypot(player.x - p.x, player.y - p.y) < player.radius + p.radius) {
+            if (Math.hypot(agent.x - p.x, agent.y - p.y) < agent.radius + p.radius) {
                 if (p.type === 'FOOD_MAGNET') {
-                    player.powerups.foodMagnet = { attractOnce: true };
+                    agent.powerups.foodMagnet = { attractOnce: true };
                 }
                 this.powerupManager.removePowerup(p);
-                break; // Assume player can only pick up one powerup at a time
+                break; // Assume agent can only pick up one powerup at a time
             }
         }
     }
 
-    _checkFoodCollision(player, foodToRemove) {
-        if (player.isDead) return;
+    _checkFoodCollision(agent, foodToRemove) {
+        if (agent.isDead) return;
 
         const nearbyFood = this.foodManager.foodSpatialHashing.query({
-            x: player.x - player.radius - FOOD_COLLISION_BUFFER,
-            y: player.y - player.radius - FOOD_COLLISION_BUFFER,
-            width: (player.radius + FOOD_COLLISION_BUFFER) * 2,
-            height: (player.radius + FOOD_COLLISION_BUFFER) * 2
+            x: agent.x - agent.radius - FOOD_COLLISION_BUFFER,
+            y: agent.y - agent.radius - FOOD_COLLISION_BUFFER,
+            width: (agent.radius + FOOD_COLLISION_BUFFER) * 2,
+            height: (agent.radius + FOOD_COLLISION_BUFFER) * 2
         });
 
         let totalScore = 0;
         nearbyFood.forEach(f => {
-            const distance = Math.hypot(player.x - f.x, player.y - f.y);
-            const radiiSum = player.radius + f.radius;
+            const distance = Math.hypot(agent.x - f.x, agent.y - f.y);
+            const radiiSum = agent.radius + f.radius;
             const collisionDetected = distance < radiiSum + FOOD_COLLISION_BUFFER;
 
             if (foodToRemove.has(f)) {
@@ -78,8 +78,8 @@ class CollisionSystem {
         });
 
         if (totalScore > 0) {
-            player.maxLength += totalScore;
-            player.radius = Math.min(MAX_PLAYER_RADIUS, player.radius + totalScore * RADIUS_GAIN_FACTOR);
+            agent.maxLength += totalScore;
+            agent.radius = Math.min(MAX_PLAYER_RADIUS, agent.radius + totalScore * RADIUS_GAIN_FACTOR);
         }
     }
 
@@ -91,103 +91,103 @@ class CollisionSystem {
         return normalizedDistance;
     }
 
-    _resolveHeadToHeadCollision(player, otherPlayer, playersToKill) {
+    _resolveHeadToHeadCollision(agent, otherAgent, agentsToKill) {
         const collisionMidpoint = {
-            x: (player.x + otherPlayer.x) / 2,
-            y: (player.y + otherPlayer.y) / 2
+            x: (agent.x + otherAgent.x) / 2,
+            y: (agent.y + otherAgent.y) / 2
         };
 
-        const playerCentering = this._calculateCollisionCentering(
-            { x: player.x, y: player.y },
-            player.radius,
+        const agentCentering = this._calculateCollisionCentering(
+            { x: agent.x, y: agent.y },
+            agent.radius,
             collisionMidpoint
         );
 
-        const otherPlayerCentering = this._calculateCollisionCentering(
-            { x: otherPlayer.x, y: otherPlayer.y },
-            otherPlayer.radius,
+        const otherAgentCentering = this._calculateCollisionCentering(
+            { x: otherAgent.x, y: otherAgent.y },
+            otherAgent.radius,
             collisionMidpoint
         );
 
-        const sizeDifference = Math.abs(player.maxLength - otherPlayer.maxLength);
-        const largerSize = Math.max(player.maxLength, otherPlayer.maxLength);
+        const sizeDifference = Math.abs(agent.maxLength - otherAgent.maxLength);
+        const largerSize = Math.max(agent.maxLength, otherAgent.maxLength);
         const sizeRatio = largerSize > 0 ? sizeDifference / largerSize : 0;
         
         const centeringThreshold = 0.15;
         const sizeNegligibleThreshold = 0.1;
 
-        const bothCentered = playerCentering < centeringThreshold && otherPlayerCentering < centeringThreshold;
+        const bothCentered = agentCentering < centeringThreshold && otherAgentCentering < centeringThreshold;
 
         if (bothCentered) {
-            playersToKill.add(player);
-            playersToKill.add(otherPlayer);
+            agentsToKill.add(agent);
+            agentsToKill.add(otherAgent);
             return;
         }
 
         if (sizeRatio < sizeNegligibleThreshold) {
-            if (playerCentering < otherPlayerCentering) {
-                playersToKill.add(otherPlayer);
-            } else if (otherPlayerCentering < playerCentering) {
-                playersToKill.add(player);
+            if (agentCentering < otherAgentCentering) {
+                agentsToKill.add(otherAgent);
+            } else if (otherAgentCentering < agentCentering) {
+                agentsToKill.add(agent);
             } else {
-                playersToKill.add(player);
-                playersToKill.add(otherPlayer);
+                agentsToKill.add(agent);
+                agentsToKill.add(otherAgent);
             }
         } else {
-            const centeringDiff = Math.abs(playerCentering - otherPlayerCentering);
+            const centeringDiff = Math.abs(agentCentering - otherAgentCentering);
             
             if (centeringDiff > 0.2) {
-                if (playerCentering > otherPlayerCentering) {
-                    playersToKill.add(player);
+                if (agentCentering > otherAgentCentering) {
+                    agentsToKill.add(agent);
                 } else {
-                    playersToKill.add(otherPlayer);
+                    agentsToKill.add(otherAgent);
                 }
             } else {
-                if (player.maxLength > otherPlayer.maxLength) {
-                    playersToKill.add(otherPlayer);
+                if (agent.maxLength > otherAgent.maxLength) {
+                    agentsToKill.add(otherAgent);
                 } else {
-                    playersToKill.add(player);
+                    agentsToKill.add(agent);
                 }
             }
         }
     }
 
     processCollisions() {
-        const playersToKill = new Set();
+        const agentsToKill = new Set();
         const foodToRemove = new Set();
-        const players = this.playerManager.getPlayers();
-        const playerList = Object.values(players);
+        const agents = this.agentManager.getAgents();
+        const agentList = Object.values(agents);
 
-        for (const player of playerList) {
-            if (player.isDead) continue;
+        for (const agent of agentList) {
+            if (agent.isDead) continue;
 
-            if (this._checkWorldBoundaryCollision(player, playersToKill)) continue;
-            this._checkPowerupCollision(player);
-            this._checkFoodCollision(player, foodToRemove);
+            if (this._checkWorldBoundaryCollision(agent, agentsToKill)) continue;
+            this._checkPowerupCollision(agent);
+            this._checkFoodCollision(agent, foodToRemove);
 
-            const queryRadius = player.radius + SNAKE_SEGMENT_RADIUS;
-            const nearbyEntities = this.playerManager.playerSpatialHashing.query({
-                x: player.x - queryRadius,
-                y: player.y - queryRadius,
+            const queryRadius = agent.radius + Creature_SEGMENT_RADIUS;
+            const nearbyEntities = this.agentManager.agentSpatialHashing.query({
+                x: agent.x - queryRadius,
+                y: agent.y - queryRadius,
                 width: queryRadius * 2,
                 height: queryRadius * 2,
             });
 
             for (const entity of nearbyEntities) {
-                const otherPlayer = entity.owner || entity;
+                const otherAgent = entity.owner || entity;
 
-                if (player.id === otherPlayer.id) continue;
-                if (otherPlayer.isDead) continue;
+                if (agent.id === otherAgent.id) continue;
+                if (otherAgent.isDead) continue;
 
-                const isHeadCollision = (entity.id === otherPlayer.id);
-                const radiiSum = isHeadCollision ? (player.radius + otherPlayer.radius) : (player.radius + SNAKE_SEGMENT_RADIUS);
-                const distance = Math.hypot(player.x - entity.x, player.y - entity.y);
+                const isHeadCollision = (entity.id === otherAgent.id);
+                const radiiSum = isHeadCollision ? (agent.radius + otherAgent.radius) : (agent.radius + Creature_SEGMENT_RADIUS);
+                const distance = Math.hypot(agent.x - entity.x, agent.y - entity.y);
 
                 if (distance < radiiSum) {
                     if (isHeadCollision) {
-                        this._resolveHeadToHeadCollision(player, otherPlayer, playersToKill);
+                        this._resolveHeadToHeadCollision(agent, otherAgent, agentsToKill);
                     } else {
-                        playersToKill.add(player);
+                        agentsToKill.add(agent);
                     }
                     break; 
                 }
@@ -198,9 +198,9 @@ class CollisionSystem {
             foodToRemove.forEach(f => this.foodManager.removeFood(f));
         }
 
-        playersToKill.forEach(player => {
-            if (!player.isDead) {
-                this.room.killPlayer(player);
+        agentsToKill.forEach(agent => {
+            if (!agent.isDead) {
+                this.Region.killAgent(agent);
             }
         });
     }
