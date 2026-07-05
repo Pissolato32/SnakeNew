@@ -127,26 +127,9 @@ class Renderer {
     }
 
     drawStaticBackground() {
-        const gridSize = 50;
         this.backgroundCtx.clearRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
-        this.backgroundCtx.fillStyle = '#1a1a1a';
+        this.backgroundCtx.fillStyle = '#0b0c10';
         this.backgroundCtx.fillRect(0, 0, this.backgroundCanvas.width, this.backgroundCanvas.height);
-        this.backgroundCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        this.backgroundCtx.lineWidth = 1;
-
-        for (let x = 0; x < this.backgroundCanvas.width; x += gridSize) {
-            this.backgroundCtx.beginPath();
-            this.backgroundCtx.moveTo(x, 0);
-            this.backgroundCtx.lineTo(x, this.backgroundCanvas.height);
-            this.backgroundCtx.stroke();
-        }
-
-        for (let y = 0; y < this.backgroundCanvas.height; y += gridSize) {
-            this.backgroundCtx.beginPath();
-            this.backgroundCtx.moveTo(0, y);
-            this.backgroundCtx.lineTo(this.backgroundCanvas.width, y);
-            this.backgroundCtx.stroke();
-        }
     }
 
     drawFood(f) {

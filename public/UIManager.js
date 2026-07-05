@@ -107,6 +107,12 @@ class UIManager {
     }
 
     updateScoreAndLeaderboard(players, selfId) {
+        const now = Date.now();
+        if (this.lastUiUpdate && now - this.lastUiUpdate < 100) {
+            return;
+        }
+        this.lastUiUpdate = now;
+
         const self = players.get(selfId);
         if (!self) return;
         this.scoreValue.textContent = Math.floor(self.maxLength);
