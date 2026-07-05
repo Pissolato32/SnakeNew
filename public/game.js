@@ -93,9 +93,9 @@ class GameClient {
         this.renderInterpolatedState();
         
         this.uiManager.updateScoreAndLeaderboard(this.gameState.players, this.gameState.selfId);
-        const input = this.inputManager.getInput();
-        this.uiManager.toggleDebugPanel(input.showDebugPanel);
-        if (input.showDebugPanel) {
+        const showDebug = this.inputManager.showDebugPanel;
+        this.uiManager.toggleDebugPanel(showDebug);
+        if (showDebug) {
             this.uiManager.updateDebugPanel(this.perfMonitor.getMetrics(), this.gameState);
         }
 
