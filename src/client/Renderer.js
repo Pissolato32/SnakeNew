@@ -152,7 +152,17 @@ class Renderer {
     drawFood(f) {
         this.ctx.fillStyle = f.color;
         this.ctx.beginPath();
-        this.ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+        
+        let dx = 0;
+        let dy = 0;
+        if (f.type !== 'butterfly') {
+            const time = Date.now() / 1000 * 0.5; // match FOOD_DANCE_SPEED
+            const danceOffset = (f.x * 7 + f.y * 13) % (2 * Math.PI); // deterministic offset based on coordinates
+            dx = Math.cos(time + danceOffset) * 2.5; // match FOOD_DANCE_RADIUS
+            dy = Math.sin(time + danceOffset) * 2.5;
+        }
+        
+        this.ctx.arc(f.x + dx, f.y + dy, f.radius, 0, Math.PI * 2);
         this.ctx.fill();
     }
 

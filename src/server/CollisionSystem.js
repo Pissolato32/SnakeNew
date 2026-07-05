@@ -184,9 +184,10 @@ class CollisionSystem {
 
                 const isHeadCollision = (entity.id === otherAgent.id);
                 const radiiSum = isHeadCollision ? (agent.radius + otherAgent.radius) : (agent.radius + Creature_SEGMENT_RADIUS);
-                const distance = Math.hypot(agent.x - entity.x, agent.y - entity.y);
+                const dx = agent.x - entity.x;
+                const dy = agent.y - entity.y;
 
-                if (distance < radiiSum) {
+                if (dx * dx + dy * dy < radiiSum * radiiSum) {
                     if (isHeadCollision) {
                         this._resolveHeadToHeadCollision(agent, otherAgent, agentsToKill);
                     } else {

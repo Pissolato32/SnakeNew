@@ -74,7 +74,6 @@ class FoodManager {
     }
 
     updateFoodMovement() {
-        const time = Date.now() / 1000 * config.game.FOOD_DANCE_SPEED;
         const boundary = config.WORLD_SIZE / 2 - config.game.FOOD_BOUNDARY_BUFFER;
 
         for (const food of this.food.values()) {
@@ -94,13 +93,8 @@ class FoodManager {
                     food.y = Math.sin(food.moveAngle) * (boundary - config.game.BUTTERFLY_BOUNDARY_POSITION_ADJUSTMENT);
                 }
 
-            } else {
-                if (!food.spawnX && food.spawnX !== 0) continue;
-                food.x = food.spawnX + Math.cos(time + food.danceOffset) * config.game.FOOD_DANCE_RADIUS;
-                food.y = food.spawnY + Math.sin(time + food.danceOffset) * config.game.FOOD_DANCE_RADIUS;
+                this.foodSpatialHashing.update(food);
             }
-            
-            this.foodSpatialHashing.update(food);
         }
     }
 
