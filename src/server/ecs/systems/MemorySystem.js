@@ -3,8 +3,8 @@ class MemorySystem {
         const bb = agent.blackboard;
         if (!bb) return;
 
-        // Certifica-se de que a estrutura existe
-        if (!bb.visitedCells) {
+        // Certifica-se de que a estrutura existe e é um Map válido
+        if (!bb.visitedCells || !(bb.visitedCells instanceof Map)) {
             bb.visitedCells = new Map();
         }
 

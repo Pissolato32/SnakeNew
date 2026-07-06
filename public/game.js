@@ -25,6 +25,13 @@ class GameClient {
         this.gameLoopRunning = false;
         this.lastTime = 0;
         this.isDead = false;
+
+        // Local state for Delta Snapshot reconstruction
+        this.localState = {
+            players: new Map(),
+            food: new Map(),
+            powerups: new Map()
+        };
     }
 
     init() {
@@ -91,6 +98,9 @@ class GameClient {
             this.gameState.reset();
             this.snapshotBuffer = [];
             this.pendingInputs = [];
+            this.localState.players.clear();
+            this.localState.food.clear();
+            this.localState.powerups.clear();
             this.renderer.cameraInitialized = false;
             this.uiManager.showDeathScreen(data.score, data.stats);
             this.renderer.gameCanvas.style.opacity = '0.3';
@@ -103,7 +113,63 @@ class GameClient {
 
     handleSnapshot(snapshot) {
         if (this.isDead) return;
-        snapshot.timestamp = performance.now();
+
+        // Resolve delta snapshots protocol v1
+        if (snapshot.v === 1 && snapshot.delta) {
+            // Reconstruct players
+            for (const p of snapshot.delta.players.spawns) {
+                this.localState.players.set(p.id, p);
+            }
+            for (const p of snapshot.delta.players.updates) {
+                const existing = this.localState.players.get(p.id);
+                if (existing) {
+                    // Update dynamic snapshot components
+                    existing.x = p.x;
+                    existing.y = p.y;
+                    existing.angle = p.angle;
+                    existing.targetAngle = p.targetAngle;
+                    existing.radius = p.radius;
+                    existing.sc = p.sc;
+                    existing.s = p.s;
+                    existing.needs = p.needs;
+                    existing.blackboard = p.blackboard;
+                } else {
+                    this.localState.players.set(p.id, p);
+                }
+            }
+            for (const id of snapshot.delta.players.removes) {
+                this.localState.players.delete(id);
+            }
+
+            // Reconstruct food
+            for (const f of snapshot.delta.food.spawns) {
+                this.localState.food.set(f.id, f);
+            }
+            for (const id of snapshot.delta.food.removes) {
+                this.localState.food.delete(id);
+            }
+
+            // Reconstruct powerups
+            for (const p of snapshot.delta.powerups.spawns) {
+                this.localState.powerups.set(p.id, p);
+            }
+            for (const id of snapshot.delta.powerups.removes) {
+                this.localState.powerups.delete(id);
+            }
+
+            // Map back to a full snapshot structure for interpolation
+            snapshot = {
+                t: snapshot.t,
+                ts: snapshot.ts,
+                timestamp: performance.now(),
+                players: Array.from(this.localState.players.values()),
+                food: Array.from(this.localState.food.values()),
+                powerups: Array.from(this.localState.powerups.values())
+            };
+        } else {
+            snapshot.timestamp = performance.now();
+        }
+
         this.snapshotBuffer.push(snapshot);
         if (this.snapshotBuffer.length > 20) {
             this.snapshotBuffer.shift();
@@ -115,6 +181,9 @@ class GameClient {
         this.isDead = false;
         this.snapshotBuffer = [];
         this.gameState.reset();
+        this.localState.players.clear();
+        this.localState.food.clear();
+        this.localState.powerups.clear();
         this.renderer.cameraInitialized = false;
 
         const details = this.uiManager.getLoginDetails();

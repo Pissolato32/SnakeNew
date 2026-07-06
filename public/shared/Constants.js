@@ -7,8 +7,8 @@ export const BOT_BOUNDARY_BUFFER = 500;
 export const gridCellSize = 200;
 
 // Game Loop and Physics Constants
-export const GAME_TICK_RATE_MS = 1000 / 60; // 60 TPS
-export const SNAPSHOT_RATE_HZ = 60; // 60 Hz
+export const GAME_TICK_RATE_MS = 100; // 100ms / 10 TPS (nominal)
+export const SNAPSHOT_RATE_HZ = 10; // 10 Hz (nominal)
 export const POWERUP_SPAWN_INTERVAL_MS = 15000;
 export const MIN_POWERUPS = 5;
 export const FOOD_MAGNET_RADIUS = 200;

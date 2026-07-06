@@ -87,7 +87,7 @@ class NavigationSystem {
      */
     calculateExplorationSteering(agent) {
         const bb = agent.blackboard;
-        if (!bb || !bb.visitedCells) {
+        if (!bb || !bb.visitedCells || !(bb.visitedCells instanceof Map)) {
             return { x: 0, y: 0 };
         }
 
