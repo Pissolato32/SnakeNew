@@ -12,7 +12,9 @@ class SocketClient {
             ? 'https://snakenew.onrender.com'
             : undefined;
 
-        this.socket = io(connectionUrl);
+        // Force WebSocket connection to bypass CORS issues on HTTP polling
+        const options = { transports: ['websocket'] };
+        this.socket = io(connectionUrl, options);
         this.setupSocketListeners();
         
         setInterval(() => {

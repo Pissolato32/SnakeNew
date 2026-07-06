@@ -7,6 +7,12 @@ const config = {
     transform: {
         '^.+\\.js$': 'babel-jest',
     },
+
+    // Ignora a pasta public de testes
+    testPathIgnorePatterns: [
+        '/node_modules/',
+        '/public/'
+    ]
 };
 
 module.exports = config;

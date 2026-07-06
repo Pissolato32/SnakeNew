@@ -109,6 +109,7 @@ class UIManager {
     onPlayAgainButtonClick() {
         this.deathScreen.style.display = 'none';
         this.loginScreen.style.display = 'flex';
+        if (this.onPlayAgain) this.onPlayAgain();
     }
 
     showGameUI() {
@@ -181,7 +182,12 @@ class UIManager {
     updateDebugPanel(metrics, gameState) {
         if (!this.debugPanel) return;
 
-        // Helper to safely update text content
+        const now = Date.now();
+        if (this.lastDebugPanelUpdate && now - this.lastDebugPanelUpdate < 250) {
+            return;
+        }
+        this.lastDebugPanelUpdate = now;
+
         const updateText = (id, value) => {
             const element = document.getElementById(id);
             if (element) {
@@ -189,34 +195,16 @@ class UIManager {
             }
         };
 
-        // Update performance metrics
-        updateText('fpsValue', metrics.fps.toFixed(2));
-        updateText('frameTimeValue', `${metrics.frameTime.toFixed(2)} ms`);
-        updateText('updateTimeValue', `${metrics.updateTime.toFixed(2)} ms`);
-        updateText('renderTimeValue', `${metrics.renderTime.toFixed(2)} ms`);
-        updateText('networkLatencyValue', `${metrics.networkLatency.toFixed(2)} ms`);
+        updateText('fpsValue', metrics.fps.toFixed(1));
+        updateText('p1LowFpsValue', metrics.p1LowFps.toFixed(1));
+        updateText('frameTimeValue', `${metrics.avgFrameTime.toFixed(2)} ms`);
+        updateText('updateTimeValue', `${metrics.avgUpdateTime.toFixed(3)} ms`);
+        updateText('renderTimeValue', `${metrics.avgRenderTime.toFixed(3)} ms`);
+        updateText('droppedFramesValue', `${metrics.droppedFrames} (${metrics.droppedFramePct.toFixed(1)}%)`);
+        updateText('networkLatencyValue', `${metrics.networkLatency.toFixed(0)} ms`);
         updateText('memoryUsageValue', `${metrics.memoryUsage.toFixed(2)} MB`);
 
-        // Update player state
-        const self = gameState.self;
-        if (self) {
-            updateText('debugX', self.x.toFixed(2));
-            updateText('debugY', self.y.toFixed(2));
-            updateText('debugCurrentSpeed', self.speed.toFixed(2));
-            updateText('debugAngle', self.angle.toFixed(2));
-            updateText('debugSize', Math.floor(self.maxLength));
-            updateText('debugRadius', self.radius.toFixed(2));
-            updateText('debugBoosting', self.isBoosting);
-        }
-
-        // Update game state
         updateText('debugBotCount', Array.from(gameState.players.values()).filter(p => p.isBot).length);
-        updateText('debugPing', `${metrics.networkLatency.toFixed(0)} ms`);
-
-        // Update chart
-        if (window.updateProfilerChart) {
-            window.updateProfilerChart(metrics.frameTime);
-        }
     }
 
     makeDraggable(element) {

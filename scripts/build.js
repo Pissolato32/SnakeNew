@@ -17,7 +17,7 @@ async function build() {
         // --- Build client source files ---
         console.log('\nProcessing client source files...');
         const files = await fs.readdir(clientSrcDir);
-        const jsFiles = files.filter(file => file.endsWith('.js'));
+        const jsFiles = files.filter(file => file.endsWith('.js') && !file.endsWith('.test.js'));
         console.log(`Found ${jsFiles.length} JavaScript files to process.`);
 
         for (const file of jsFiles) {
