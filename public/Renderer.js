@@ -46,8 +46,17 @@ class Renderer {
         const self = this.gameState.getPlayer(this.gameState.selfId);
         if (!self) return;
 
-        this.camera.x += (self.x - this.camera.x) * CAMERA_MOVE_SMOOTHING;
-        this.camera.y += (self.y - this.camera.y) * CAMERA_MOVE_SMOOTHING;
+        // On the first frame where we find our player, snap the camera
+        // directly to their position instead of slowly smoothing from (0,0).
+        if (!this.cameraInitialized) {
+            this.camera.x = self.x;
+            this.camera.y = self.y;
+            this.cameraInitialized = true;
+        } else {
+            this.camera.x += (self.x - this.camera.x) * CAMERA_MOVE_SMOOTHING;
+            this.camera.y += (self.y - this.camera.y) * CAMERA_MOVE_SMOOTHING;
+        }
+
         const targetZoom = Math.pow(self.maxLength / 30, CAMERA_ZOOM_FACTOR) * CAMERA_ZOOM_MULTIPLIER;
         this.camera.zoom += (targetZoom - this.camera.zoom) * CAMERA_ZOOM_SMOOTHING;
     }

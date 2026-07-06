@@ -86,6 +86,7 @@ class GameClient {
             this.gameState.reset();
             this.snapshotBuffer = [];
             this.pendingInputs = [];
+            this.renderer.cameraInitialized = false;
             this.uiManager.showDeathScreen(data.score);
             this.renderer.gameCanvas.style.opacity = '0.3';
         };
@@ -109,6 +110,7 @@ class GameClient {
         this.isDead = false;
         this.snapshotBuffer = [];
         this.gameState.reset();
+        this.renderer.cameraInitialized = false;
 
         const details = this.uiManager.getLoginDetails();
         const token = localStorage.getItem(`snakenew_token_${details.nickname}`);
