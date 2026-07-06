@@ -30,10 +30,16 @@ app.use(compression());
 // Custom CORS middleware to dynamically handle credentials and Vercel domains
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin) {
+    if (origin && config.ALLOWED_ORIGINS.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
+    } else if (!origin) {
+        // Fallback for non-browser clients (if acceptable), or explicitly reject
+        // Allowing no-origin might be insecure if credentials are required,
+        // but for public APIs it's common. We'll leave it out or restrict it.
+        // Actually, if we want to be strictly secure and require CORS for web:
+        res.setHeader('Access-Control-Allow-Origin', config.ALLOWED_ORIGINS[0]);
     } else {
-        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Origin', 'null');
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization');
@@ -48,8 +54,11 @@ const server = http.createServer(app);
 const io = new SocketIOServer(server, {
     cors: {
         origin: (origin, callback) => {
-            // Reflect request origin or fallback to allow all
-            callback(null, origin || '*');
+            if (!origin || config.ALLOWED_ORIGINS.includes(origin)) {
+                callback(null, origin || config.ALLOWED_ORIGINS[0]);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
         },
         methods: ['GET', 'POST'],
         credentials: true
