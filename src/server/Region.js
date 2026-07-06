@@ -62,7 +62,7 @@ class Region {
 
     async initializeWorld() {
         this.logger.info(`Initializing world for Region ${this.id}...`);
-        
+
         try {
             const savedState = await this.persistenceSystem.loadState();
             if (savedState && savedState.agents && savedState.agents.length > 0) {
@@ -75,7 +75,7 @@ class Region {
                         savedAgent.skin || 'default',
                         savedAgent.color
                     );
-                    
+
                     agent.x = savedAgent.x;
                     agent.y = savedAgent.y;
                     agent.maxLength = savedAgent.maxLength || agent.maxLength;
@@ -86,7 +86,7 @@ class Region {
                     if (savedAgent.strategy) agent.strategy = { ...agent.strategy, ...savedAgent.strategy };
                     if (savedAgent.needs) agent.needs = { ...agent.needs, ...savedAgent.needs };
                     if (savedAgent.blackboard) agent.blackboard = { ...agent.blackboard, ...savedAgent.blackboard };
-                    
+
                     agent.body.clear();
                     agent.body.addFirst({ x: agent.x, y: agent.y });
                 }
@@ -102,14 +102,14 @@ class Region {
         const initialAgentCount = Object.values(this.agentManager.getAgents()).length;
         const initialFoodCount = DYNAMIC_FOOD_TARGET_BASE + (initialAgentCount * DYNAMIC_FOOD_TARGET_PER_PLAYER);
         this.foodManager.addFoodInBatch(initialFoodCount, this.agentManager.getAgents(), SPAWN_BUFFER);
-        
+
         this.isReady = true;
         this.logger.info(`Region ${this.id} initialization complete.`);
     }
 
     addAgent(socket, agentData) {
         const { nickname, skin, color, token } = agentData;
-        
+
         const existingAgent = Object.values(this.agentManager.getAgents()).find(
             a => a.nickname === nickname && !a.isBot
         );
@@ -120,20 +120,20 @@ class Region {
                 socket.emit('login-failed', { error: 'Este nickname já está em uso por outra cobra ativa!' });
                 return;
             }
-            
+
             this.logger.info(`Reconnecting strategist to existing agent: ${nickname}`);
             const oldId = existingAgent.id;
             delete this.agentManager.agents[oldId];
             existingAgent.id = socket.id;
             existingAgent.isOffline = false;
-            
+
             // Log how long the snake was autonomously AI-controlled
             if (existingAgent.offlineSince) {
                 const offlineDuration = Math.floor((Date.now() - existingAgent.offlineSince) / 1000);
                 this.logger.info(`Agent '${nickname}' was AI-controlled for ${offlineDuration}s. Returning to player control.`);
                 existingAgent.offlineSince = null;
             }
-            
+
             this.agentManager.agents[socket.id] = existingAgent;
             socket.emit('game-setup', { worldSize: WORLD_SIZE, token: existingAgent.token });
         } else {
@@ -351,6 +351,7 @@ class Region {
             sc: p.maxLength,
             seq: p.lastProcessedInputSeq,
             needs: p.needs,
+            strategy: p.strategy,
             blackboard: {
                 currentGoal: p.blackboard?.currentGoal || 'EXPLORE'
             }
