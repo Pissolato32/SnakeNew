@@ -30,20 +30,25 @@ app.use(compression());
 // Custom CORS middleware to dynamically handle credentials and Vercel domains
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && config.ALLOWED_ORIGINS.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    } else if (!origin) {
-        // Fallback for non-browser clients (if acceptable), or explicitly reject
-        // Allowing no-origin might be insecure if credentials are required,
-        // but for public APIs it's common. We'll leave it out or restrict it.
-        // Actually, if we want to be strictly secure and require CORS for web:
-        res.setHeader('Access-Control-Allow-Origin', config.ALLOWED_ORIGINS[0]);
-    } else {
-        res.setHeader('Access-Control-Allow-Origin', 'null');
+    // If the origin is missing, it's likely a non-browser client (like mobile apps, curl, etc.)
+    // We allow these but don't set CORS headers since they are not needed by the client.
+    // If an origin is provided, we strictly validate it against our allowed list.
+    if (origin) {
+        if (config.ALLOWED_ORIGINS.includes(origin)) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+        } else {
+            // Unrecognized origin: Do not set Access-Control-Allow-Origin, making the browser block it.
+            // Sending a 403 for OPTIONS is a good practice to explicitly reject preflight for disallowed origins.
+            if (req.method === 'OPTIONS') {
+                return res.sendStatus(403);
+            }
+        }
     }
+
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
