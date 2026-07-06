@@ -21,7 +21,6 @@ class GameState {
         this.players.clear();
         this.food.clear();
         this.powerups.clear();
-        this.selfId = null;
     }
 
     getPlayer(id) {
