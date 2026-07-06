@@ -4,6 +4,10 @@ import UIManager from './UIManager.js';
 import SocketClient from './SocketClient.js';
 import Renderer from './Renderer.js';
 import PerformanceMonitor from '../../public/PerformanceMonitor.js';
+import { injectSpeedInsights } from '../../public/vendor/speed-insights.mjs';
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
 
 const INTERPOLATION_BUFFER_MS = 120;
 
