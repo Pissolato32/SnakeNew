@@ -39,6 +39,11 @@ async function build() {
         await fs.copyFile(chartJsSrc, chartJsDest);
         console.log('- Copied: chart.js');
 
+        const socketIoSrc = path.join(nodeModulesDir, 'socket.io-client/dist/socket.io.min.js');
+        const socketIoDest = path.join(vendorDir, 'socket.io.min.js');
+        await fs.copyFile(socketIoSrc, socketIoDest);
+        console.log('- Copied: socket.io.min.js');
+
         // --- Copy shared files for static serving on Vercel ---
         console.log('\nProcessing shared files...');
         const sharedSrcDir = path.join(__dirname, '../src/shared');

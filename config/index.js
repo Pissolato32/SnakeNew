@@ -52,6 +52,12 @@ const config = {
     BOT_COUNT: parseInt(process.env.BOT_COUNT, 10) || 10,
     WORLD_SIZE: parseInt(process.env.WORLD_SIZE, 10) || 30000,
     MAX_AGENTS: parseInt(process.env.MAX_AGENTS, 10) || 100,
+    ALLOWED_ORIGINS: [
+        'https://snake-6xrd3nee8-pissolato32s-projects.vercel.app',
+        'https://snakenew.onrender.com',
+        'http://localhost:3000',
+        'http://localhost:5173',
+    ],
     game: {
         BOT_NAMES,
         SPAWN_BUFFER,

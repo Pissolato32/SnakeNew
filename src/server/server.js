@@ -21,7 +21,7 @@ app.use(helmet({
             scriptSrc: ['\'self\'', '\'unsafe-inline\'', 'https://cdn.jsdelivr.net', 'https://cdn.socket.io'],
             styleSrc: ['\'self\'', '\'unsafe-inline\'', 'https://fonts.googleapis.com'],
             imgSrc: ['\'self\'', 'data:'],
-            connectSrc: ['\'self\'', 'ws:', 'wss:', 'https://cdn.jsdelivr.net', 'https://cdn.socket.io']
+            connectSrc: ['\'self\'', 'ws:', 'wss:', 'https://cdn.jsdelivr.net', 'https://cdn.socket.io', 'https://snakenew.onrender.com']
         }
     }
 }));
