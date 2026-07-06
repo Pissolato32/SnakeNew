@@ -1,174 +1,108 @@
-import config from '../../../../config/index.js';
-import RNG from '../../services/RandomService.js';
+import { GoalType } from '../types/GoalType.js';
+import FeedEvaluator from './FeedEvaluator.js';
+import HuntEvaluator from './HuntEvaluator.js';
+import FleeEvaluator from './FleeEvaluator.js';
+import ExploreEvaluator from './ExploreEvaluator.js';
 
 class UtilityAI {
-    update(agent, context) {
-        // Reduz o cooldown de decisão, se houver
-        if (agent.blackboard.decisionCooldown > 0) {
-            agent.blackboard.decisionCooldown--;
-        }
-
-        // Em uma Utility AI real, todos os objetivos (Goals/Ações) competem.
-        const actions = [
-            this.scoreExploreAction(agent),
-            this.scoreFeedAction(agent),
-            this.scoreFleeAction(agent),
-            this.scoreHuntAction(agent) // Implementar caça ativa de agentes menores
+    constructor() {
+        // Registra avaliadores comportamentais desacoplados (Open/Closed)
+        this.evaluators = [
+            new FeedEvaluator(),
+            new HuntEvaluator(),
+            new FleeEvaluator(),
+            new ExploreEvaluator()
         ];
+    }
 
-        // Escolhe a ação com o maior score
-        let bestAction = actions[0];
-        for (const action of actions) {
-            if (action.score > bestAction.score) {
-                bestAction = action;
+    update(agent, context) {
+        const bb = agent.blackboard;
+        if (!bb) return;
+
+        // Reduz o cooldown de decisão, se houver
+        if (bb.decisionCooldown > 0) {
+            bb.decisionCooldown--;
+        }
+
+        const now = Date.now();
+        let shouldReplan = false;
+
+        // 1. Invalidações de Cache (Gatilhos de Replanejamento por Eventos Críticos)
+        if (!bb.currentGoal || !bb.goalExpirationTime || now >= bb.goalExpirationTime) {
+            shouldReplan = true;
+        }
+
+        // Alteração de integridade (tomou dano/colidiu)
+        if (agent.maxLength < (bb.lastKnownLength || agent.maxLength)) {
+            shouldReplan = true;
+        }
+        bb.lastKnownLength = agent.maxLength;
+
+        // Mudança crítica de necessidades (Fome urgente)
+        if (agent.needs.hunger > 80 && bb.currentGoal !== GoalType.FEED) {
+            shouldReplan = true;
+        }
+
+        // Ameaça iminente detectada (Medo urgente)
+        if (agent.needs.fear > 50 && bb.currentGoal !== GoalType.FLEE) {
+            shouldReplan = true;
+        }
+
+        // Perda de alvo de comida
+        if (bb.currentGoal === GoalType.FEED) {
+            const targetFoodId = bb.targetFoodId;
+            if (!targetFoodId || !context.foodManager.food.has(targetFoodId)) {
+                shouldReplan = true;
             }
         }
 
-        // Se encontrou uma nova ação excelente, ou o cooldown expirou, muda de ação
-        if (bestAction.score > (agent.blackboard.lastDecision?.score || 0) + 10 || agent.blackboard.decisionCooldown <= 0) {
-            agent.blackboard.currentGoal = bestAction.goal;
-            agent.blackboard.lastDecision = bestAction;
-            agent.blackboard.decisionCooldown = 15; // Mantém a decisão por um tempo (ex: 3 ticks de AI)
+        // Perda de alvo de caça
+        if (bb.currentGoal === GoalType.HUNT) {
+            const targetPreyId = bb.targetPreyId;
+            const prey = context.agentManager.getAgents()[targetPreyId];
+            if (!prey || prey.isDead) {
+                shouldReplan = true;
+            }
         }
 
-        // Executa o vetor de Steering baseado na ação vencedora
-        let finalVector = bestAction.vector;
-        agent.isBoosting = bestAction.boost;
-
-        // Adiciona Avoidance (instintivo, roda sobre a camada racional)
-        const avoidanceVector = this.calculateAvoidance(agent, context);
-        finalVector.x += avoidanceVector.x;
-        finalVector.y += avoidanceVector.y;
-
-        const mag = Math.hypot(finalVector.x, finalVector.y);
-        if (mag > 0.01) {
-            agent.targetAngle = Math.atan2(finalVector.y, finalVector.x);
-        }
-    }
-
-    scoreExploreAction(agent) {
-        // Explorar sempre tem um peso base, influenciado pela Curiosidade e Confiança
-        const baseScore = 30;
-        const curiosityBonus = agent.strategy.curiosity * 0.2;
-        const score = baseScore + curiosityBonus;
-
-        // Vetor Wander
-        const wanderAngle = agent.targetAngle + RNG.range(-0.5, 0.5);
-        return {
-            goal: 'EXPLORE',
-            score: score,
-            vector: { x: Math.cos(wanderAngle), y: Math.sin(wanderAngle) },
-            boost: false
-        };
-    }
-
-    scoreFeedAction(agent) {
-        if (!agent.blackboard.lastKnownFood || agent.blackboard.lastKnownFood.length === 0) {
-            return { goal: 'FEED', score: 0, vector: { x: 0, y: 0 }, boost: false };
-        }
-
-        // Fome aumenta enormemente o apelo de comer
-        const hungerDrive = agent.needs.hunger * 1.5;
-
-        let bestFood = null;
-        let bestFoodScore = -Infinity;
-
-        for (const food of agent.blackboard.lastKnownFood) {
-            const dx = agent.x - food.x;
-            const dy = agent.y - food.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            // Avalia o item de comida
-            let itemScore = (food.score * 50) - dist;
-
-            // Cautela: se a comida estiver no dangerMap ou perto de threat
-            if (agent.strategy.caution > agent.strategy.greed) {
-                for (const threat of agent.blackboard.knownThreats) {
-                    const ftdx = food.x - threat.x;
-                    const ftdy = food.y - threat.y;
-                    // Evita Math.sqrt para a checagem de proximidade da ameaça (300^2 = 90000)
-                    if (ftdx * ftdx + ftdy * ftdy < 90000) {
-                        itemScore -= 200 * (agent.strategy.caution / 50);
-                    }
+        // 2. Executa planejamento de nova meta se necessário
+        if (shouldReplan) {
+            // Roda todos os avaliadores modulares registrados
+            const results = this.evaluators.map(evaluator => {
+                try {
+                    return evaluator.evaluate(agent, context);
+                } catch (err) {
+                    return { score: -Infinity, goal: GoalType.EXPLORE, targetId: null, reasons: ['Erro no avaliador'] };
                 }
-            }
-            if (itemScore > bestFoodScore) {
-                bestFoodScore = itemScore;
-                bestFood = food;
-            }
-        }
+            });
 
-        const finalScore = bestFoodScore > -Infinity ? (bestFoodScore * 0.1) + hungerDrive : 0;
+            // Encontra a melhor ação racional
+            const best = results.reduce((max, r) => r.score > max.score ? r : max, { score: -Infinity, goal: GoalType.EXPLORE, targetId: null, reasons: [] });
 
-        if (bestFood && finalScore > 0) {
-            return {
-                goal: 'FEED',
-                score: finalScore,
-                vector: { x: bestFood.x - agent.x, y: bestFood.y - agent.y },
-                boost: agent.needs.hunger > 80 && agent.needs.energy > 30 // Usa boost se estiver desesperado
+            bb.currentGoal = best.goal;
+            bb.goalExpirationTime = now + 5000; // TTL: 5 segundos
+
+            if (best.goal === GoalType.FEED) {
+                bb.targetFoodId = best.targetId;
+            } else if (best.goal === GoalType.HUNT) {
+                bb.targetPreyId = best.targetId;
+            }
+
+            // Grava rastreabilidade Decision Tracing explicável
+            bb.decisionTrace = {
+                tick: context.tickCount || 0,
+                chosenGoal: best.goal,
+                scores: {
+                    FEED: results.find(r => r.goal === GoalType.FEED)?.score || 0,
+                    HUNT: results.find(r => r.goal === GoalType.HUNT)?.score || 0,
+                    FLEE: results.find(r => r.goal === GoalType.FLEE)?.score || 0,
+                    EXPLORE: results.find(r => r.goal === GoalType.EXPLORE)?.score || 0
+                },
+                reasons: best.reasons
             };
+
+            bb.lastDecision = best;
         }
-        return { goal: 'FEED', score: 0, vector: { x: 0, y: 0 }, boost: false };
-    }
-
-    scoreFleeAction(agent) {
-        if (!agent.blackboard.knownThreats || agent.blackboard.knownThreats.length === 0) {
-            return { goal: 'FLEE', score: 0, vector: { x: 0, y: 0 }, boost: false };
-        }
-
-        let totalThreat = 0;
-        let fleeVec = { x: 0, y: 0 };
-
-        for (const threat of agent.blackboard.knownThreats) {
-            const dx = agent.x - threat.x;
-            const dy = agent.y - threat.y;
-            const dist = Math.hypot(dx, dy);
-            if (dist > 0 && dist < 1000) {
-                // Quão maior o inimigo e mais perto, maior a ameaça
-                const sizeRatio = threat.maxLength / agent.maxLength;
-                const threatLevel = (1000 - dist) * sizeRatio;
-                totalThreat += threatLevel;
-
-                fleeVec.x += (dx / dist) * threatLevel;
-                fleeVec.y += (dy / dist) * threatLevel;
-            }
-        }
-
-        // Medo (Fear) e Cautela amplificam o score de fuga
-        const fearDrive = agent.needs.fear * 2;
-        const score = (totalThreat * 0.05 * (agent.strategy.caution / 50)) + fearDrive;
-
-        return {
-            goal: 'FLEE',
-            score: score,
-            vector: fleeVec,
-            boost: score > 50 && agent.needs.energy > 10 // Foge com boost se perigo for alto
-        };
-    }
-
-    scoreHuntAction(agent) {
-        // Para caçar, precisa de Agressividade, Confiança e falta de Fome excessiva (ou ganância)
-        const aggressionDrive = agent.strategy.aggression;
-        if (aggressionDrive < 30) return { goal: 'HUNT', score: 0, vector: {x:0, y:0}, boost: false };
-
-        // TODO: Escanear array de agentes menores no blackboard (knownPrey)
-        // Por enquanto, placeholder
-        return { goal: 'HUNT', score: 0, vector: {x:0, y:0}, boost: false };
-    }
-
-    calculateAvoidance(agent, context) {
-        let vec = { x: 0, y: 0 };
-        const WORLD_SIZE = config.game ? config.game.WORLD_SIZE : 30000;
-        const BOUNDARY_BUFFER = config.game ? config.game.BOT_BOUNDARY_BUFFER : 500;
-
-        const dist = Math.hypot(agent.x, agent.y);
-        const halfWorld = WORLD_SIZE / 2;
-        if (dist > halfWorld - BOUNDARY_BUFFER) {
-            const angleToCenter = Math.atan2(-agent.y, -agent.x);
-            vec.x = Math.cos(angleToCenter);
-            vec.y = Math.sin(angleToCenter);
-        }
-
-        return vec;
     }
 }
 

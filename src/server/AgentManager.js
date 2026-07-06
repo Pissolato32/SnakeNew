@@ -6,17 +6,29 @@ import config from '../../config/index.js';
 import Validator from './Validator.js';
 
 class AgentManager {
-    constructor(io, foodManager, logger, RegionId) {
+    constructor(io, foodManager, logger, RegionId, eventBus = null) {
         this.io = io;
         this.agents = {};
         this.agentSpatialHashing = new SpatialHashing(AGENT_SPATIAL_HASH_CELL_SIZE);
         this.foodManager = foodManager;
         this.logger = logger;
         this.RegionId = RegionId;
+        this.eventBus = eventBus;
     }
 
     createAgent(id, nickname, isBot = true, skin = 'default', color = null) {
-        const startPos = getSafeSpawnPoint(this.agents, SPAWN_BUFFER);
+        let startPos;
+        if (isBot && Object.keys(this.agents).length > 50) {
+            const WORLD_SIZE = 30000;
+            const angle = Math.random() * 2 * Math.PI;
+            const r = Math.random() * (WORLD_SIZE / 4);
+            startPos = { 
+                x: Math.cos(angle) * r, 
+                y: Math.sin(angle) * r 
+            };
+        } else {
+            startPos = getSafeSpawnPoint(this.agents, SPAWN_BUFFER);
+        }
 
         let agentColor = color;
         if (!agentColor) {
@@ -71,7 +83,10 @@ class AgentManager {
                 visitedRegions: [],
                 safeZones: [],
                 lastDangerArea: null,
-                currentPath: null
+                currentPath: null,
+                visitedCells: new Map(),
+                worldModel: { opportunities: [], threats: [] },
+                decisionTrace: null
             },
             needs: {
                 hunger: 0,
@@ -81,6 +96,16 @@ class AgentManager {
                 fatigue: 0,
                 curiosity: 50,
                 confidence: 50
+            },
+            stats: {
+                bornAt: Date.now(),
+                kills: 0,
+                foodEaten: 0,
+                maxHungerReached: 0,
+                maxStressReached: 0,
+                maxFearReached: 0,
+                maxFatigueReached: 0,
+                deathReason: 'collision'
             },
             handleStrategyInput: (data) => {
                 if (data && data.type === "STRATEGY_UPDATE") {
@@ -99,6 +124,9 @@ class AgentManager {
         this.agents[agent.id] = agent;
         this.agentSpatialHashing.insert(agent);
         this.logger.info(`Agent ${agent.nickname} (${agent.id}) added to Region ${this.RegionId}.`);
+        if (this.eventBus) {
+            this.eventBus.publish('AGENT_BORN', agent);
+        }
     }
 
     removeAgent(agentId) {
@@ -145,22 +173,34 @@ class AgentManager {
         // this.removeAgent(agent.id); // The agent object is kept as 'dead' until cleanup
     }
 
-    addBot() {
+    addBot(activeNames = null) {
         const botId = `bot_${Math.random().toString(36).substr(2, 9)}`;
         let baseName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
         let botName = baseName;
         let counter = 1;
 
-        while (Object.values(this.agents).some(p => p.nickname === botName)) {
-            botName = `${baseName} ${counter}`;
-            counter++;
+        if (activeNames) {
+            while (activeNames.has(botName)) {
+                botName = `${baseName} ${counter}`;
+                counter++;
+            }
+            activeNames.add(botName);
+        } else {
+            const currentNames = new Set(Object.values(this.agents).map(p => p.nickname));
+            while (currentNames.has(botName)) {
+                botName = `${baseName} ${counter}`;
+                counter++;
+            }
         }
         this.createAgent(botId, botName, true);
     }
 
     initBots() {
         const botCount = config.BOT_COUNT || 0;
-        for (let i = 0; i < botCount; i++) { this.addBot(); }
+        const activeNames = new Set(Object.values(this.agents).map(p => p.nickname));
+        for (let i = 0; i < botCount; i++) {
+            this.addBot(activeNames);
+        }
     }
 
     getAgents() {

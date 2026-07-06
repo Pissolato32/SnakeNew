@@ -103,6 +103,10 @@ class Renderer {
 
         this.drawParticles();
 
+        if (this.uiManager && this.uiManager.showFOV) {
+            this.drawDebugOverlays(self);
+        }
+
         this.ctx.restore();
     }
 
@@ -366,6 +370,97 @@ class Renderer {
         }
 
         this.minimapCtx.restore();
+    }
+
+    drawDebugOverlays(self) {
+        // 1. FOV Circle (1500px radius / 3000px diameter)
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(self.x, self.y, 1500, 0, Math.PI * 2);
+        this.ctx.strokeStyle = 'rgba(102, 252, 241, 0.2)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([10, 15]);
+        this.ctx.stroke();
+        this.ctx.fillStyle = 'rgba(102, 252, 241, 0.015)';
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // 2. Decision steering vectors (target angle vs current velocity angle)
+        // Intended Steering Vector (Cyan)
+        const targetLen = 150;
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.moveTo(self.x, self.y);
+        this.ctx.lineTo(self.x + Math.cos(self.targetAngle) * targetLen, self.y + Math.sin(self.targetAngle) * targetLen);
+        this.ctx.strokeStyle = '#00ffcc';
+        this.ctx.lineWidth = 4;
+        this.ctx.stroke();
+        
+        // Arrow head for Intended Steering
+        const arrowSize = 10;
+        const arrowAngle = self.targetAngle;
+        this.ctx.beginPath();
+        this.ctx.moveTo(self.x + Math.cos(arrowAngle) * targetLen, self.y + Math.sin(arrowAngle) * targetLen);
+        this.ctx.lineTo(
+            self.x + Math.cos(arrowAngle) * targetLen - arrowSize * Math.cos(arrowAngle - Math.PI / 6),
+            self.y + Math.sin(arrowAngle) * targetLen - arrowSize * Math.sin(arrowAngle - Math.PI / 6)
+        );
+        this.ctx.lineTo(
+            self.x + Math.cos(arrowAngle) * targetLen - arrowSize * Math.cos(arrowAngle + Math.PI / 6),
+            self.y + Math.sin(arrowAngle) * targetLen - arrowSize * Math.sin(arrowAngle + Math.PI / 6)
+        );
+        this.ctx.closePath();
+        this.ctx.fillStyle = '#00ffcc';
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // Current Heading Vector (Orange)
+        const currentLen = 100;
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.moveTo(self.x, self.y);
+        this.ctx.lineTo(self.x + Math.cos(self.angle) * currentLen, self.y + Math.sin(self.angle) * currentLen);
+        this.ctx.strokeStyle = '#ffa500';
+        this.ctx.lineWidth = 2.5;
+        this.ctx.stroke();
+        
+        // Arrow head for Current Heading
+        this.ctx.beginPath();
+        this.ctx.moveTo(self.x + Math.cos(self.angle) * currentLen, self.y + Math.sin(self.angle) * currentLen);
+        this.ctx.lineTo(
+            self.x + Math.cos(self.angle) * currentLen - arrowSize * Math.cos(self.angle - Math.PI / 6),
+            self.y + Math.sin(self.angle) * currentLen - arrowSize * Math.sin(self.angle - Math.PI / 6)
+        );
+        this.ctx.lineTo(
+            self.x + Math.cos(self.angle) * currentLen - arrowSize * Math.cos(self.angle + Math.PI / 6),
+            self.y + Math.sin(self.angle) * currentLen - arrowSize * Math.sin(self.angle + Math.PI / 6)
+        );
+        this.ctx.closePath();
+        this.ctx.fillStyle = '#ffa500';
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // 3. Danger Map spatial risk zones
+        if (self.blackboard && Array.isArray(self.blackboard.dangerMap)) {
+            self.blackboard.dangerMap.forEach(zone => {
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.arc(zone.x, zone.y, 400 * zone.intensity, 0, Math.PI * 2);
+                this.ctx.strokeStyle = `rgba(255, 69, 0, ${zone.intensity * 0.45})`;
+                this.ctx.lineWidth = 3;
+                this.ctx.setLineDash([6, 8]);
+                this.ctx.stroke();
+                this.ctx.fillStyle = `rgba(255, 69, 0, ${zone.intensity * 0.06})`;
+                this.ctx.fill();
+
+                // Warning indicator text
+                this.ctx.font = 'bold 12px "Courier New"';
+                this.ctx.fillStyle = `rgba(255, 99, 71, ${zone.intensity})`;
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`☣️ RISK ${Math.round(zone.intensity * 100)}%`, zone.x, zone.y);
+                this.ctx.restore();
+            });
+        }
     }
 }
 

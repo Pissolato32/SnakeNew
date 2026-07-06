@@ -23,8 +23,24 @@ class UIManager {
         this.energyBar = document.getElementById('energyBar');
         this.hungerValue = document.getElementById('hungerValue');
         this.hungerBar = document.getElementById('hungerBar');
+        this.stressValue = document.getElementById('stressValue');
+        this.stressBar = document.getElementById('stressBar');
+        this.fearValue = document.getElementById('fearValue');
+        this.fearBar = document.getElementById('fearBar');
+        this.fatigueValue = document.getElementById('fatigueValue');
+        this.fatigueBar = document.getElementById('fatigueBar');
         this.blackboardState = document.getElementById('blackboardState');
-        this.strategySliders = ['aggression', 'caution', 'curiosity'];
+        this.strategySliders = ['aggression', 'caution', 'curiosity', 'greed'];
+        this.toggleFOV = document.getElementById('toggleFOV');
+        this.showFOV = false;
+
+        this.deathReason = document.getElementById('deathReason');
+        this.deathSurvivalTime = document.getElementById('deathSurvivalTime');
+        this.deathKills = document.getElementById('deathKills');
+        this.deathFoodEaten = document.getElementById('deathFoodEaten');
+        this.deathMaxHunger = document.getElementById('deathMaxHunger');
+        this.deathMaxStress = document.getElementById('deathMaxStress');
+        this.deathMaxFear = document.getElementById('deathMaxFear');
 
         this.solidColors = UI_SOLID_COLORS;
         this.currentColorIndex = 0;
@@ -100,6 +116,12 @@ class UIManager {
                 closeButton.addEventListener('click', () => this.toggleDebugPanel(false));
             }
         }
+
+        if (this.toggleFOV) {
+            this.toggleFOV.addEventListener('change', () => {
+                this.showFOV = this.toggleFOV.checked;
+            });
+        }
     }
 
     onPlayButtonClick() {
@@ -126,8 +148,24 @@ class UIManager {
         if (minimapCanvas) minimapCanvas.style.display = 'block';
     }
 
-    showDeathScreen(score) {
+    showDeathScreen(score, stats = null) {
         this.finalScore.textContent = score;
+        
+        if (stats) {
+            const survivalMs = Date.now() - (stats.bornAt || Date.now());
+            const seconds = Math.floor(survivalMs / 1000) % 60;
+            const minutes = Math.floor(survivalMs / 60000);
+            const timeString = `${minutes}m ${seconds}s`;
+
+            if (this.deathReason) this.deathReason.textContent = stats.deathReason || 'collision';
+            if (this.deathSurvivalTime) this.deathSurvivalTime.textContent = timeString;
+            if (this.deathKills) this.deathKills.textContent = stats.kills || 0;
+            if (this.deathFoodEaten) this.deathFoodEaten.textContent = stats.foodEaten || 0;
+            if (this.deathMaxHunger) this.deathMaxHunger.textContent = `${Math.round(stats.maxHungerReached || 0)}%`;
+            if (this.deathMaxStress) this.deathMaxStress.textContent = `${Math.round(stats.maxStressReached || 0)}%`;
+            if (this.deathMaxFear) this.deathMaxFear.textContent = `${Math.round(stats.maxFearReached || 0)}%`;
+        }
+
         this.deathScreen.classList.remove('hidden');
         this.gameUI.classList.add('hidden');
     }
@@ -160,9 +198,15 @@ class UIManager {
             if (this.energyBar) this.energyBar.style.width = `${self.needs.energy || 0}%`;
             if (this.hungerValue) this.hungerValue.textContent = Math.floor(self.needs.hunger || 0);
             if (this.hungerBar) this.hungerBar.style.width = `${self.needs.hunger || 0}%`;
+            if (this.stressValue) this.stressValue.textContent = Math.floor(self.needs.stress || 0);
+            if (this.stressBar) this.stressBar.style.width = `${self.needs.stress || 0}%`;
+            if (this.fearValue) this.fearValue.textContent = Math.floor(self.needs.fear || 0);
+            if (this.fearBar) this.fearBar.style.width = `${self.needs.fear || 0}%`;
+            if (this.fatigueValue) this.fatigueValue.textContent = Math.floor(self.needs.fatigue || 0);
+            if (this.fatigueBar) this.fatigueBar.style.width = `${self.needs.fatigue || 0}%`;
         }
         if (self.blackboard && this.blackboardState) {
-            this.blackboardState.textContent = `Goal: ${self.blackboard.currentGoal || 'EXPLORE'}`;
+            this.blackboardState.textContent = `Goal: ${self.blackboard.currentGoal || 'EXPLORE'} | State: ${self.blackboard.emotionalState || 'CALM'}`;
         }
     }
 

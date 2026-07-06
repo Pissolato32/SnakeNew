@@ -1,10 +1,10 @@
-import JsonPersistenceProvider from '../providers/JsonPersistenceProvider.js';
+import SQLitePersistenceProvider from '../providers/SQLitePersistenceProvider.js';
 
 class PersistenceSystem {
     constructor(logger, provider = null) {
         this.logger = logger;
-        // Injeta o provider, ou usa o JSON como default fallback (MVP)
-        this.provider = provider || new JsonPersistenceProvider(this.logger);
+        // Injeta o provider, ou usa o SQLite como provedor oficial
+        this.provider = provider || new SQLitePersistenceProvider(this.logger);
 
         this.lastSave = Date.now();
         this.saveInterval = 30000; // Salva a cada 30 segundos
@@ -34,6 +34,9 @@ class PersistenceSystem {
                 offlineSince: agent.offlineSince || null,
                 x: agent.x,
                 y: agent.y,
+                angle: agent.angle,
+                color: agent.color,
+                skin: agent.skin,
                 maxLength: agent.maxLength,
                 radius: agent.radius,
                 strategy: agent.strategy,

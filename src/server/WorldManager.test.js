@@ -20,6 +20,7 @@ describe('WorldManager', () => {
     let onCalls;
     let toCalls;
     let ioEmitCalls;
+    let sendSnapshotsCalled;
 
     beforeEach(() => {
         joinCalls = [];
@@ -32,6 +33,7 @@ describe('WorldManager', () => {
         onCalls = [];
         toCalls = [];
         ioEmitCalls = [];
+        sendSnapshotsCalled = 0;
 
         // Mock socket
         mockSocket = {
@@ -56,6 +58,7 @@ describe('WorldManager', () => {
             isReady: true,
             addAgent: (s, data) => { addAgentCalls.push({ s, data }); },
             getSnapshot: () => ({ agents: [] }),
+            sendSnapshots: () => { sendSnapshotsCalled++; },
             tick: () => { tickCalled++; },
             simulateOfflineProgression: (dt) => { simulateCalls.push(dt); },
             agentManager: {
@@ -161,9 +164,6 @@ describe('WorldManager', () => {
 
         worldManager.sendSnapshots();
 
-        expect(toCalls).toContain('A');
-        expect(ioEmitCalls).toHaveLength(1);
-        expect(ioEmitCalls[0].ev).toBe('snapshot');
-        expect(ioEmitCalls[0].val).toEqual({ agents: [] });
+        expect(sendSnapshotsCalled).toBe(1);
     });
 });

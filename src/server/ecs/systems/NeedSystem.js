@@ -32,6 +32,14 @@ class NeedSystem {
             agent.needs.stress -= 0.1;
             if (agent.needs.stress < 0) agent.needs.stress = 0;
         }
+
+        // Atualiza estatísticas de pico
+        if (agent.stats) {
+            agent.stats.maxHungerReached = Math.max(agent.stats.maxHungerReached || 0, agent.needs.hunger);
+            agent.stats.maxStressReached = Math.max(agent.stats.maxStressReached || 0, agent.needs.stress);
+            agent.stats.maxFearReached = Math.max(agent.stats.maxFearReached || 0, agent.needs.fear);
+            agent.stats.maxFatigueReached = Math.max(agent.stats.maxFatigueReached || 0, agent.needs.fatigue);
+        }
     }
 }
 

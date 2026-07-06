@@ -22,11 +22,12 @@ class PerceptionSystem {
         // Escaneia Agentes (heads e body segments)
         const nearbyEntities = agentManager.agentSpatialHashing.query(visionRect);
         bb.knownThreats = [];
+        bb.knownPrey = [];
         let localFear = 0;
 
         for (const entity of nearbyEntities) {
             const other = entity.owner || entity;
-            if (!other || other.id === agent.id) continue;
+            if (!other || other.id === agent.id || other.isDead) continue;
 
             // É uma ameaça se for maior (com vantagem definida na config)
             const advantage = config.game ? config.game.AI_ATTACK_SIZE_ADVANTAGE : 1.2;
@@ -35,6 +36,10 @@ class PerceptionSystem {
                     bb.knownThreats.push(other);
                 }
                 localFear += 20; // Spike imediato de medo
+            } else if (agent.maxLength > other.maxLength * advantage) {
+                if (!bb.knownPrey.some(p => p.id === other.id)) {
+                    bb.knownPrey.push(other);
+                }
             }
         }
 

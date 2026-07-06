@@ -3,12 +3,13 @@ import { hslToRgb, getSafeSpawnPoint } from '../shared/Utils.js';
 import SpatialHashing from '../shared/SpatialHashing.js';
 
 class FoodManager {
-    constructor(logger) {
+    constructor(logger, eventBus = null) {
         this.food = new Map();
         this.foodPool = [];
         this.foodSpatialHashing = new SpatialHashing(config.game.FOOD_SPATIAL_HASH_CELL_SIZE);
         this.FOOD_TYPES = config.game.FOOD_TYPES;
         this.logger = logger;
+        this.eventBus = eventBus;
     }
 
     createFood(x, y, typeIndex, agents, spawnBuffer) {
@@ -22,7 +23,13 @@ class FoodManager {
         const foodType = typeIndex !== undefined ? config.game.FOOD_TYPES[typeIndex] : config.game.FOOD_TYPES[Math.floor(Math.random() * config.game.FOOD_TYPES.length)];
         let spawnPoint = { x, y };
         if (x === undefined || y === undefined) {
-            spawnPoint = getSafeSpawnPoint(agents, spawnBuffer);
+            const WORLD_SIZE = config.game ? config.game.WORLD_SIZE : 30000;
+            const angle = Math.random() * 2 * Math.PI;
+            const r = Math.random() * (WORLD_SIZE / 2 - 100);
+            spawnPoint = {
+                x: Math.cos(angle) * r,
+                y: Math.sin(angle) * r
+            };
         }
 
         foodItem.x = spawnPoint.x;
@@ -46,6 +53,9 @@ class FoodManager {
     addFood(foodItem) {
         this.food.set(foodItem.id, foodItem);
         this.foodSpatialHashing.insert(foodItem);
+        if (this.eventBus) {
+            this.eventBus.publish('FOOD_SPAWNED', { count: 1 });
+        }
     }
 
     removeFood(foodItem) {

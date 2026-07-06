@@ -55,6 +55,7 @@ class GameState {
                 player.x = this.lerp(pA.x, pB.x, t);
                 player.y = this.lerp(pA.y, pB.y, t);
                 player.angle = this.slerp(pA.angle, pB.angle, t);
+                player.targetAngle = this.slerp(pA.targetAngle !== undefined ? pA.targetAngle : pA.angle, pB.targetAngle !== undefined ? pB.targetAngle : pB.angle, t);
 
                 const bodyA = pA.s || [];
                 const bodyB = pB.s || [];
@@ -77,6 +78,7 @@ class GameState {
                 player.x = pB.x;
                 player.y = pB.y;
                 player.angle = pB.angle;
+                player.targetAngle = pB.targetAngle !== undefined ? pB.targetAngle : pB.angle;
                 player.body.reset();
                 const body = pB.s || [];
                 for (let i = body.length - 1; i >= 0; i--) {

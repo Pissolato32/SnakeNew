@@ -133,8 +133,9 @@ class WorldManager {
         // Apenas envia snapshots se não estiver dormindo e houver sockets ativos
         if (this.isSleeping || this.io.sockets.sockets.size === 0) return;
         for (const region of this.regions.values()) {
-            const snapshot = region.getSnapshot();
-            this.io.to(region.id).emit('snapshot', snapshot);
+            if (region.isReady) {
+                region.sendSnapshots();
+            }
         }
     }
 }

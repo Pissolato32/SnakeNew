@@ -1,0 +1,532 @@
+{
+  "timestamp": 1783313590980,
+  "agents": [
+    {
+      "id": "bot_0vl1a9w5k",
+      "nickname": "Pretzel",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 5379.707800169902,
+      "y": -13993.459842895254,
+      "maxLength": 50,
+      "radius": 10.5,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 100,
+        "energy": 88.4334149999999,
+        "stress": 0,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_4rel3ri42",
+      "nickname": "Snek",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 6250.375160356118,
+      "y": 2424.9270804524317,
+      "maxLength": 2279,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 0,
+        "energy": 100,
+        "stress": 0,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_an1nmx5gy",
+      "nickname": "Pretzel 1",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 14665.383379714272,
+      "y": 3069.347927478145,
+      "maxLength": 748,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 64.6915,
+        "energy": 99.7171,
+        "stress": 87.90000000000069,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_eb00fd0fv",
+      "nickname": "Slinky",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": -14415.340307313936,
+      "y": -4123.579446846375,
+      "maxLength": 27,
+      "radius": 8,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 0.354,
+        "energy": 100,
+        "stress": 0,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_56ld3nz2q",
+      "nickname": "Pretzel 2",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 5941.617902158102,
+      "y": 8227.265559764137,
+      "maxLength": 1342,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 12.537499999999998,
+        "energy": 95.99539999999999,
+        "stress": 10.400000000001384,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_yeq1tgkrz",
+      "nickname": "Slinky 1",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 14848.279195717749,
+      "y": 1987.0018308660692,
+      "maxLength": 227,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 38.13865040000003,
+        "energy": 100,
+        "stress": 92.9000000000004,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_efmlwe4fa",
+      "nickname": "Slinky 2",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 4173.802336407767,
+      "y": -14389.141675361014,
+      "maxLength": 3253,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 100,
+        "energy": 81.29458742199976,
+        "stress": 0,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_nwsxdp0nc",
+      "nickname": "Slitherin",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": -3513.3451501041204,
+      "y": -1297.7856473411655,
+      "maxLength": 1031,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 7.529499999999999,
+        "energy": 98.98819999999998,
+        "stress": 90.10000000000056,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_119sxd1by",
+      "nickname": "Boop",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 8499.329721925664,
+      "y": -12337.81339589214,
+      "maxLength": 1172,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 58.19615099999999,
+        "energy": 89.30915813799986,
+        "stress": 89.10000000000062,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_rzx3av7pq",
+      "nickname": "Boop 1",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 14968.152937326835,
+      "y": 602.0026165833518,
+      "maxLength": 456,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 63.02400000000008,
+        "energy": 100,
+        "stress": 93.80000000000035,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "TsmRhk0pTQHlmu25AAAD",
+      "nickname": "Pissot",
+      "isBot": false,
+      "token": "tok_dhchuajbc_mr8pe6gs",
+      "isOffline": false,
+      "offlineSince": null,
+      "x": -2292.649679579963,
+      "y": -3654.409764618549,
+      "maxLength": 3158,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 20.028499999999998,
+        "energy": 91.98859999999998,
+        "stress": 90.10000000000056,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "FEED"
+      }
+    },
+    {
+      "id": "RpA4Ul0KCwcXy4f_AAAJ",
+      "nickname": "Anonymous",
+      "isBot": false,
+      "token": "tok_wdnzrhde8_mr8pfsh7",
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 14162.95506710896,
+      "y": -4890.169166273123,
+      "maxLength": 113,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 64.9518344000002,
+        "energy": 100,
+        "stress": 82.400000000001,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "QJ6kAR8TYtuJZCpsAAAD",
+      "nickname": "AgeTestPlayen",
+      "isBot": false,
+      "token": "tok_gvx81yby9_mr8pqzfg",
+      "isOffline": true,
+      "offlineSince": 1783311738369,
+      "x": 13574.348788798638,
+      "y": 6371.143337769804,
+      "maxLength": 10,
+      "radius": 8,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 23.360000000000014,
+        "energy": 100,
+        "stress": 0,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "bot_k5y2ut7ar",
+      "nickname": "Slinky 3",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": -3752.3317989317275,
+      "y": 3927.823329514297,
+      "maxLength": 523,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 0,
+        "energy": 100,
+        "stress": 95.60000000000025,
+        "fear": 0,
+        "fatigue": 0.2399999999999931,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "NSJ6PvvpLz0H1NPUAAAB",
+      "nickname": "test",
+      "isBot": false,
+      "token": "tok_j5jhwq6jo_mr8qektn",
+      "isOffline": true,
+      "offlineSince": 1783312830457,
+      "x": -302.31051601691854,
+      "y": 10.03353729297608,
+      "maxLength": 779,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 0,
+        "energy": 94,
+        "stress": 100,
+        "fear": 16400,
+        "fatigue": 1.2,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "FLEE"
+      }
+    },
+    {
+      "id": "bot_c21zqt6lb",
+      "nickname": "Pretzel 3",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": -5936.429145038259,
+      "y": 4928.027101793027,
+      "maxLength": 1696,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 5.0035,
+        "energy": 97.9986,
+        "stress": 0,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "FEED"
+      }
+    },
+    {
+      "id": "bot_o6s2ru51k",
+      "nickname": "Pretzel 4",
+      "isBot": true,
+      "isOffline": false,
+      "offlineSince": null,
+      "x": 97.7413731432403,
+      "y": -11387.617228264306,
+      "maxLength": 134,
+      "radius": 13,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 2.5035,
+        "energy": 98.9986,
+        "stress": 0,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    },
+    {
+      "id": "AlV8Fmw_SgtwRBmZAAAD",
+      "nickname": "TestPlayer",
+      "isBot": false,
+      "token": "tok_01georifx_mr8ps1ww",
+      "isOffline": true,
+      "offlineSince": 1783312939798,
+      "x": -13351.0634877734,
+      "y": -205.13104783543753,
+      "maxLength": 668,
+      "radius": 20,
+      "strategy": {
+        "aggression": 50,
+        "caution": 50,
+        "curiosity": 50,
+        "greed": 50
+      },
+      "needs": {
+        "hunger": 0,
+        "energy": 100,
+        "stress": 90.10000000000056,
+        "fear": 0,
+        "fatigue": 0,
+        "curiosity": 50,
+        "confidence": 50
+      },
+      "blackboard": {
+        "currentGoal": "EXPLORE"
+      }
+    }
+  ]
+}

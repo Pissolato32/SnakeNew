@@ -26,6 +26,7 @@ class GameClient {
     init() {
         this.setupEventHandlers();
         this.socketClient.connect();
+        this.renderer.uiManager = this.uiManager;
 
         this.uiManager.onStrategyChange = (property, value) => {
             this.inputManager.updateStrategy({ [property]: value });
@@ -87,7 +88,7 @@ class GameClient {
             this.snapshotBuffer = [];
             this.pendingInputs = [];
             this.renderer.cameraInitialized = false;
-            this.uiManager.showDeathScreen(data.score);
+            this.uiManager.showDeathScreen(data.score, data.stats);
             this.renderer.gameCanvas.style.opacity = '0.3';
         };
 

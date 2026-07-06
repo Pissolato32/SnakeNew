@@ -47,6 +47,18 @@
                 <label>Hunger: <span id="hungerValue">0</span>%</label>
                 <div class="progress-bar"><div id="hungerBar" style="width: 0%; background: #ff4500;"></div></div>
             </div>
+            <div class="progress-container">
+                <label>Stress: <span id="stressValue">0</span>%</label>
+                <div class="progress-bar"><div id="stressBar" style="width: 0%; background: #9370db;"></div></div>
+            </div>
+            <div class="progress-container">
+                <label>Fear: <span id="fearValue">0</span>%</label>
+                <div class="progress-bar"><div id="fearBar" style="width: 0%; background: #ff1493;"></div></div>
+            </div>
+            <div class="progress-container">
+                <label>Fatigue: <span id="fatigueValue">0</span>%</label>
+                <div class="progress-bar"><div id="fatigueBar" style="width: 0%; background: #ffa500;"></div></div>
+            </div>
 
             <h4>Strategy & DNA</h4>
             <div class="slider-container">
@@ -70,9 +82,22 @@
                     <input type="number" id="curiosityValue" min="0" max="100" step="0.01" value="50.00">
                 </div>
             </div>
+            <div class="slider-container">
+                <label>Greed</label>
+                <div class="slider-row">
+                    <input type="range" id="greedSlider" min="0" max="100" step="0.01" value="50.00">
+                    <input type="number" id="greedValue" min="0" max="100" step="0.01" value="50.00">
+                </div>
+            </div>
 
             <h4>Mental State (Blackboard)</h4>
-            <div id="blackboardState">Goal: EXPLORE</div>
+            <div id="blackboardState">Goal: EXPLORE | State: CALM</div>
+            <h4>Visual Debug</h4>
+            <div style="margin-bottom: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #a9b7c6; font-size: 12px;">
+                    <input type="checkbox" id="toggleFOV" style="cursor: pointer;"> Show FOV & Decision Vectors
+                </label>
+            </div>
         </div>
 
         <div id="leaderboard">
@@ -82,9 +107,22 @@
     </div>
 
     <div id="deathScreen" class="screen hidden">
-        <div class="death-box">
+        <div class="death-box" style="min-width: 360px;">
             <h1>Subject Terminated</h1>
             <p>Data Collected (Biomass): <span id="finalScore">0</span></p>
+
+            <!-- Black Box / Caixa Preta Report -->
+            <div id="blackBoxReport" style="margin: 20px 0; background: #0b0c10; padding: 20px; border-radius: 8px; border: 2px solid #ff4500; text-align: left; font-family: 'Courier New', monospace; font-size: 13px; color: #ff6347; box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);">
+                <h3 style="margin: 0 0 15px 0; color: #ff4500; text-align: center; font-size: 15px; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid rgba(255, 69, 0, 0.3); padding-bottom: 8px;">📂 black box report</h3>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between;"><span>💀 Status:</span><span id="deathReason" style="color: #66fcf1; font-weight: bold;">-</span></div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between;"><span>⏱️ Lifetime:</span><span id="deathSurvivalTime" style="color: #c5c6c7;">-</span></div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between;"><span>⚔️ Kills:</span><span id="deathKills" style="color: #c5c6c7;">-</span></div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between;"><span>🍎 Food Eaten:</span><span id="deathFoodEaten" style="color: #c5c6c7;">-</span></div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between;"><span>📈 Peak Hunger:</span><span id="deathMaxHunger" style="color: #c5c6c7;">-</span></div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between;"><span>⚡ Peak Stress:</span><span id="deathMaxStress" style="color: #c5c6c7;">-</span></div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between;"><span>😰 Peak Fear:</span><span id="deathMaxFear" style="color: #c5c6c7;">-</span></div>
+            </div>
+
             <p>Analyze the visual data and adjust your strategy.</p>
             <button id="playAgainButton">Synthesize New Agent</button>
         </div>

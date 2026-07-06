@@ -7,17 +7,19 @@ import {
 } from '../shared/Constants.js';
 
 class CollisionSystem {
-    constructor(agentManager, foodManager, powerupManager, Region, logger) {
+    constructor(agentManager, foodManager, powerupManager, Region, logger, eventBus = null) {
         this.agentManager = agentManager;
         this.foodManager = foodManager;
         this.powerupManager = powerupManager;
         this.Region = Region;
         this.logger = logger;
+        this.eventBus = eventBus;
     }
 
     _checkWorldBoundaryCollision(agent, agentsToKill) {
         if (Math.hypot(agent.x, agent.y) > WORLD_SIZE / 2 - agent.radius) {
             agentsToKill.add(agent);
+            if (agent.stats) agent.stats.deathReason = 'boundary';
             return true;
         }
         for (let i = 0; i < agent.body.length; i++) {
@@ -26,6 +28,7 @@ class CollisionSystem {
             if (Math.hypot(segment.x, segment.y) > WORLD_SIZE / 2) {
                 this.logger.debug(`Agent ${agent.id} body segment ${i} out of bounds, killing agent.`);
                 agentsToKill.add(agent);
+                if (agent.stats) agent.stats.deathReason = 'boundary';
                 return true;
             }
         }
@@ -77,6 +80,12 @@ class CollisionSystem {
                 if (agent.needs) {
                     agent.needs.hunger = Math.max(0, agent.needs.hunger - f.score * 5);
                 }
+                if (agent.stats) {
+                    agent.stats.foodEaten = (agent.stats.foodEaten || 0) + 1;
+                }
+                if (this.eventBus) {
+                    this.eventBus.publish('FOOD_EATEN', { agentId: agent.id, foodId: f.id });
+                }
             }
         });
 
@@ -124,17 +133,25 @@ class CollisionSystem {
         if (bothCentered) {
             agentsToKill.add(agent);
             agentsToKill.add(otherAgent);
+            if (agent.stats) agent.stats.deathReason = `head-on collision with ${otherAgent.nickname}`;
+            if (otherAgent.stats) otherAgent.stats.deathReason = `head-on collision with ${agent.nickname}`;
             return;
         }
 
         if (sizeRatio < sizeNegligibleThreshold) {
             if (agentCentering < otherAgentCentering) {
                 agentsToKill.add(otherAgent);
+                if (otherAgent.stats) otherAgent.stats.deathReason = `head-on collision with ${agent.nickname}`;
+                if (agent.stats) agent.stats.kills = (agent.stats.kills || 0) + 1;
             } else if (otherAgentCentering < agentCentering) {
                 agentsToKill.add(agent);
+                if (agent.stats) agent.stats.deathReason = `head-on collision with ${otherAgent.nickname}`;
+                if (otherAgent.stats) otherAgent.stats.kills = (otherAgent.stats.kills || 0) + 1;
             } else {
                 agentsToKill.add(agent);
                 agentsToKill.add(otherAgent);
+                if (agent.stats) agent.stats.deathReason = `head-on collision with ${otherAgent.nickname}`;
+                if (otherAgent.stats) otherAgent.stats.deathReason = `head-on collision with ${agent.nickname}`;
             }
         } else {
             const centeringDiff = Math.abs(agentCentering - otherAgentCentering);
@@ -142,14 +159,22 @@ class CollisionSystem {
             if (centeringDiff > 0.2) {
                 if (agentCentering > otherAgentCentering) {
                     agentsToKill.add(agent);
+                    if (agent.stats) agent.stats.deathReason = `head-on collision with ${otherAgent.nickname}`;
+                    if (otherAgent.stats) otherAgent.stats.kills = (otherAgent.stats.kills || 0) + 1;
                 } else {
                     agentsToKill.add(otherAgent);
+                    if (otherAgent.stats) otherAgent.stats.deathReason = `head-on collision with ${agent.nickname}`;
+                    if (agent.stats) agent.stats.kills = (agent.stats.kills || 0) + 1;
                 }
             } else {
                 if (agent.maxLength > otherAgent.maxLength) {
                     agentsToKill.add(otherAgent);
+                    if (otherAgent.stats) otherAgent.stats.deathReason = `head-on collision with ${agent.nickname}`;
+                    if (agent.stats) agent.stats.kills = (agent.stats.kills || 0) + 1;
                 } else {
                     agentsToKill.add(agent);
+                    if (agent.stats) agent.stats.deathReason = `head-on collision with ${otherAgent.nickname}`;
+                    if (otherAgent.stats) otherAgent.stats.kills = (otherAgent.stats.kills || 0) + 1;
                 }
             }
         }
@@ -192,6 +217,12 @@ class CollisionSystem {
                         this._resolveHeadToHeadCollision(agent, otherAgent, agentsToKill);
                     } else {
                         agentsToKill.add(agent);
+                        if (agent.stats) {
+                            agent.stats.deathReason = `collision with ${otherAgent.nickname}`;
+                        }
+                        if (otherAgent.stats) {
+                            otherAgent.stats.kills = (otherAgent.stats.kills || 0) + 1;
+                        }
                     }
                     break; 
                 }
@@ -205,6 +236,15 @@ class CollisionSystem {
         agentsToKill.forEach(agent => {
             if (!agent.isDead) {
                 this.Region.killAgent(agent);
+                if (this.eventBus) {
+                    this.eventBus.publish('AGENT_DIED', {
+                        id: agent.id,
+                        nickname: agent.nickname,
+                        x: agent.x,
+                        y: agent.y,
+                        maxLength: agent.maxLength
+                    });
+                }
             }
         });
     }
