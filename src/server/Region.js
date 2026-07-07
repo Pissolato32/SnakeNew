@@ -117,6 +117,10 @@ class Region {
             this.statsSystem.updateRegionStats(this);
         });
 
+        this.scheduler.addTask('BotManager', 0.2, (now) => {
+            this.runBotManagement();
+        });
+
         // Inscreve observadores estatísticos no Event Bus para escutar eventos biológicos
         if (this.eventBus) {
             this.eventBus.subscribe('AGENT_BORN', (agent) => {
@@ -154,8 +158,17 @@ class Region {
                         savedAgent.color
                     );
 
-                    agent.x = savedAgent.x;
-                    agent.y = savedAgent.y;
+                    // Valida se o agente carregado está fora dos limites para evitar morte instantânea por boundary
+                    const distFromCenter = Math.hypot(savedAgent.x, savedAgent.y);
+                    if (distFromCenter > WORLD_SIZE / 2 - 200) {
+                        const angle = Math.random() * 2 * Math.PI;
+                        const r = Math.random() * (WORLD_SIZE / 4);
+                        agent.x = Math.cos(angle) * r;
+                        agent.y = Math.sin(angle) * r;
+                    } else {
+                        agent.x = savedAgent.x;
+                        agent.y = savedAgent.y;
+                    }
                     // Restore direction so the snake keeps heading the same way
                     if (savedAgent.angle !== undefined) {
                         agent.angle = savedAgent.angle;
@@ -663,6 +676,21 @@ class Region {
             if (this.antiCheat.detectSpeedHack(agent) || this.antiCheat.detectTeleport(agent)) {
                 this.logger.warn(`Cheating detected for agent ${agent.id}, removing from game`);
                 this.killAgent(agent);
+            }
+        }
+    }
+
+    runBotManagement() {
+        const agents = this.agentManager.getAgents();
+        const activeBots = Object.values(agents).filter(a => a.isBot && !a.isDead);
+        const targetBotCount = config.BOT_COUNT || 10;
+
+        if (activeBots.length < targetBotCount) {
+            const botsToSpawn = targetBotCount - activeBots.length;
+            this.logger.info(`[BotManager] Active bots: ${activeBots.length}/${targetBotCount}. Spawning ${botsToSpawn} new bots.`);
+            const activeNames = new Set(Object.values(agents).map(p => p.nickname));
+            for (let i = 0; i < botsToSpawn; i++) {
+                this.agentManager.addBot(activeNames);
             }
         }
     }
