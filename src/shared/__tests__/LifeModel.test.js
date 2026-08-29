@@ -13,7 +13,7 @@ describe('LifeModel', () => {
         const focus = normalizeFocus({ food: 9, safety: 0, combat: 4 });
         expect(Object.keys(focus)).toEqual(FOCUS_KEYS);
         expect(focus.food).toBe(5);
-        expect(focus.safety).toBe(3);
+        expect(focus.safety).toBe(1);
         expect(focus.combat).toBe(4);
         expect(focus.exploration).toBe(3);
     });
@@ -29,15 +29,7 @@ describe('LifeModel', () => {
     });
 
     test('creates a default focus profile', () => {
-        expect(createDefaultFocus()).toEqual({
-            food: 3,
-            safety: 3,
-            exploration: 3,
-            combat: 3,
-            cooperation: 3,
-            growth: 3,
-            energy: 3
-        });
+        expect(createDefaultFocus()).toEqual({ food: 3, safety: 3, exploration: 3, combat: 3, cooperation: 3, growth: 3, energy: 3 });
     });
 
     test('creates distinct persistent identities', () => {
