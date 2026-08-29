@@ -5,8 +5,9 @@ import MemorySystem from './ecs/systems/MemorySystem.js';
 import GoalSystem from './ecs/systems/GoalSystem.js';
 
 /**
- * AIManager atua como o Scheduler Cognitivo para cada agente individual.
- * Delega as chamadas nas frequências corretas.
+ * Scheduler cognitivo. A IA controla somente agentes cujo controller === 'AI'.
+ * Quando o jogador assume uma minhoca, a entidade permanece no mundo, mas
+ * as decisões autônomas deixam de comandar seu movimento.
  */
 class AIManager {
     constructor(agentManager, foodManager, logger, eventBus = null) {
@@ -14,7 +15,6 @@ class AIManager {
         this.foodManager = foodManager;
         this.logger = logger;
         this.eventBus = eventBus;
-
         this.utilityAI = new UtilityAI();
         this.needSystem = new NeedSystem();
         this.perceptionSystem = new PerceptionSystem();
@@ -22,9 +22,7 @@ class AIManager {
         this.goalSystem = new GoalSystem();
 
         if (this.eventBus) {
-            this.eventBus.subscribe('AGENT_DIED', (data) => {
-                this.handleAgentDeath(data);
-            });
+            this.eventBus.subscribe('AGENT_DIED', (data) => this.handleAgentDeath(data));
         }
     }
 
@@ -33,12 +31,7 @@ class AIManager {
         for (const id in agents) {
             const agent = agents[id];
             if (agent.isDead || agent.id === data.id) continue;
-
-            if (!agent.blackboard.dangerMap) {
-                agent.blackboard.dangerMap = [];
-            }
-
-            // Apenas registra a zona de perigo se estiver dentro de uma distância limite (ex: 4000 pixels)
+            if (!agent.blackboard.dangerMap) agent.blackboard.dangerMap = [];
             const dist = Math.hypot(agent.x - data.x, agent.y - data.y);
             if (dist < 4000) {
                 agent.blackboard.dangerMap.push({
@@ -52,27 +45,22 @@ class AIManager {
     }
 
     update(agent, globalTickCount) {
+        if (!agent || agent.isDead || agent.controller !== 'AI') return;
+
         const context = {
             agentManager: this.agentManager,
-            foodManager: this.foodManager
+            foodManager: this.foodManager,
+            tickCount: globalTickCount
         };
 
-        // 1Hz (a cada 60 ticks) - Atualização lenta de Needs, Fadiga, Metas e Memória
         if (globalTickCount % 60 === 0) {
             this.needSystem.update(agent);
             this.goalSystem.update(agent);
             this.memorySystem.update(agent);
         }
 
-        // 20Hz (a cada 3 ticks) - Sensores Visuais
-        if (globalTickCount % 3 === 0) {
-            this.perceptionSystem.update(agent, context);
-        }
-
-        // 5Hz (a cada 12 ticks) - Tomada de Decisão (Brain)
-        if (globalTickCount % 12 === 0) {
-            this.utilityAI.update(agent, context);
-        }
+        if (globalTickCount % 3 === 0) this.perceptionSystem.update(agent, context);
+        if (globalTickCount % 12 === 0) this.utilityAI.update(agent, context);
     }
 }
 
