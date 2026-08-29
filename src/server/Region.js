@@ -16,6 +16,7 @@ import StatsSystem from './ecs/systems/StatsSystem.js';
 import PredictionSystem from './ecs/systems/PredictionSystem.js';
 import WorldModelSystem from './ecs/systems/WorldModelSystem.js';
 import NavigationSystem from './ecs/systems/NavigationSystem.js';
+import ReproductionSystem from './ecs/systems/ReproductionSystem.js';
 import {
     DYNAMIC_FOOD_TARGET_BASE, DYNAMIC_FOOD_TARGET_PER_PLAYER, SPAWN_BUFFER,
     BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP, BOOST_SPEED_MULTIPLIER, BOOST_FOOD_DROP_INTERVAL,
@@ -49,6 +50,8 @@ class Region {
         this.predictionSystem = new PredictionSystem();
         this.worldModelSystem = new WorldModelSystem();
         this.navigationSystem = new NavigationSystem(this.predictionSystem);
+        this.reproductionSystem = new ReproductionSystem();
+        this.reproductionCooldownMs = 30000;
 
         this.scheduler.addTask('Physics', 10, () => this.runPhysicsTick());
         this.scheduler.addTask('Collision', 10, () => this.collisionSystem.processCollisions());
@@ -56,6 +59,7 @@ class Region {
         this.scheduler.addTask('AI', 10, () => this.runAITick());
         this.scheduler.addTask('Needs', 1, () => this.runNeedsTick());
         this.scheduler.addTask('Goals', 1, () => this.runGoalsTick());
+        this.scheduler.addTask('Reproduction', 0.5, () => this.runReproductionTick());
         this.scheduler.addTask('ResourceManager', 0.5, (now) => this.resourceManager.update(now));
         this.scheduler.addTask('Persistence', 1 / 30, () => this.persistenceSystem.update(this.agentManager.getAgents()));
         this.statsSystem = new StatsSystem();
@@ -241,6 +245,51 @@ class Region {
                 this.aiManager.goalSystem.update(agent);
                 this.aiManager.memorySystem.update(agent);
             }
+        }
+    }
+
+    runReproductionTick() {
+        const agents = Object.values(this.agentManager.getAgents());
+        const now = Date.now();
+        const candidates = agents.filter((agent) =>
+            !agent.isDead &&
+            agent.controller === 'AI' &&
+            this.reproductionSystem.canReproduce(agent) &&
+            now - (agent.blackboard.lastReproductionAt || 0) >= this.reproductionCooldownMs
+        );
+
+        for (const parentA of candidates) {
+            if (parentA.isDead || now - (parentA.blackboard.lastReproductionAt || 0) < this.reproductionCooldownMs) continue;
+            const partner = candidates.find((parentB) =>
+                parentB !== parentA &&
+                parentB.familyId === parentA.familyId &&
+                Math.hypot(parentA.x - parentB.x, parentA.y - parentB.y) <= 800 &&
+                now - (parentB.blackboard.lastReproductionAt || 0) >= this.reproductionCooldownMs
+            );
+            if (!partner) continue;
+
+            const offspring = this.reproductionSystem.createOffspring(parentA, partner, {
+                broodId: parentA.broodId || null,
+                mutationRate: 0.05,
+                isBot: true
+            });
+            const offspringId = `offspring_${offspring.persistentId}`;
+            const nickname = `Worm-${offspring.persistentId.slice(-6)}`;
+            const child = this.agentManager.createAgent(offspringId, nickname, true, parentA.skin, parentA.color);
+            child.persistentId = offspring.persistentId;
+            child.familyId = offspring.familyId;
+            child.broodId = offspring.broodId;
+            child.generation = offspring.generation;
+            child.genes = offspring.genes;
+            child.traits = offspring.traits;
+            child.parents = offspring.parents;
+            child.controller = 'AI';
+            child.isOnline = false;
+            child.isOffline = false;
+            child.blackboard.lastReproductionAt = now;
+            parentA.blackboard.lastReproductionAt = now;
+            partner.blackboard.lastReproductionAt = now;
+            this.logger.info(`New offspring '${nickname}' born from ${parentA.persistentId} + ${partner.persistentId}.`);
         }
     }
 
