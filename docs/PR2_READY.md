@@ -1,0 +1,1 @@
+Life selection protocol implementation is ready for review and merge before reproduction integration.
