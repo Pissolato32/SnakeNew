@@ -4,13 +4,12 @@ class FeedEvaluator {
     evaluate(agent, context) {
         const opps = agent.blackboard?.worldModel?.opportunities || [];
         const bestFood = opps.find(o => o.type === 'food');
-
-        if (!bestFood) {
-            return { score: 0, goal: GoalType.FEED, targetId: null, reasons: ['Nenhuma comida avistada'] };
-        }
+        if (!bestFood) return { score: 0, goal: GoalType.FEED, targetId: null, reasons: ['Nenhuma comida avistada'] };
 
         const hungerDrive = agent.needs.hunger * 1.5;
-        const score = (bestFood.score * 0.1) + hungerDrive;
+        const focus = agent.focus?.food ?? 3;
+        const focusMultiplier = 0.5 + (focus / 5);
+        const score = ((bestFood.score * 0.1) + hungerDrive) * focusMultiplier;
 
         return {
             score,
@@ -18,6 +17,7 @@ class FeedEvaluator {
             targetId: bestFood.id,
             reasons: [
                 `+ fome alta (+${hungerDrive.toFixed(1)})`,
+                `+ foco alimentação ${focus}/5 (x${focusMultiplier.toFixed(2)})`,
                 `+ proximidade do recurso (+${(bestFood.score * 0.1).toFixed(1)})`
             ]
         };
