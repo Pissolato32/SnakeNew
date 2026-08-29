@@ -24,8 +24,10 @@ const agentDataSchema = z.object({
     nickname: nicknameSchema,
     skin: z.string().optional(),
     color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-    token: z.string().min(8).max(256).optional()
-});
+    token: z.string().min(8).max(256).optional(),
+    persistentId: z.string().min(8).max(128).optional(),
+    listLives: z.boolean().optional()
+}).strict();
 
 class Validator {
     static validateNickname(nickname) {
