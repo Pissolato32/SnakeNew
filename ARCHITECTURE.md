@@ -2,82 +2,268 @@
 
 ## Visão Geral
 
-O SnakeNew é um jogo multiplayer persistente inspirado no Slither.io, construído com Node.js no backend e JavaScript vanilla no frontend. A arquitetura é baseada em componentes desacoplados de Simulação de Regiões, Sistemas de IA Cognitiva e Persistência de Estado (ECS) com suporte a simulação em background 24/7.
+O SnakeNew é um mundo multiplayer persistente inspirado no Slither.io, construído com Node.js no backend e JavaScript vanilla no frontend. A arquitetura combina ECS, simulação server-authoritative, Utility AI, persistência e simulação de fundo.
+
+A diretriz central é:
+
+> **A minhoca é uma vida persistente. O jogador assume o controle dela quando entra e a engine assume novamente quando ele sai.**
+
+Socket.IO representa a presença do jogador. Não representa a existência da minhoca.
 
 ## Estrutura de Diretórios
 
-```
+```text
 SnakeNew/
-├── src/                    # Código fonte principal
-│   ├── server/            # Lógica do servidor (Física, Redes, Persistência)
-│   │   ├── ecs/           # Sistemas e Provedores do ecossistema de Persistência
-│   │   └── services/      # Serviços auxiliares de backend
-│   ├── client/            # Lógica do cliente (Canvas, Interpolação, Painel de Controle)
-│   └── shared/            # Código compartilhado entre cliente e servidor
-├── public/                # Código buildado e assets estáticos para o navegador
-├── config/                # Arquivos de configurações e variáveis de ambiente
-└── scripts/               # Scripts auxiliares de build e teste
+├── src/
+│   ├── server/
+│   │   ├── ecs/
+│   │   │   ├── systems/
+│   │   │   ├── providers/
+│   │   │   └── types/
+│   │   ├── services/
+│   │   └── *.js
+│   ├── client/
+│   └── shared/
+│       ├── Constants.js
+│       ├── LifeModel.js
+│       ├── SkillTree.js
+│       └── ...
+├── public/
+├── config/
+├── docs/
+│   └── ALIFE_ECOSYSTEM.md
+└── scripts/
 ```
+
+## Ciclo de Vida
+
+```text
+              ┌──────────────┐
+              │   PERSISTED  │
+              │     WORM     │
+              └──────┬───────┘
+                     │ connect
+                     ▼
+              ┌──────────────┐
+              │    HUMAN     │
+              │  possession  │
+              └──────┬───────┘
+                     │ disconnect
+                     ▼
+              ┌──────────────┐
+              │      AI      │
+              │ autonomous   │
+              └──────┬───────┘
+                     │
+             ┌───────┴────────┐
+             │                │
+          reconnect       neutralized
+             │                │
+             ▼                ▼
+          HUMAN             NONE
+```
+
+A desconexão não chama `removeAgent()` para uma minhoca viva. `WorldManager.handleDisconnect()` marca a entidade como offline e muda o controlador para `AI`.
+
+## Identidade Persistente
+
+O objeto de agente agora possui uma identidade de vida independente do socket:
+
+```text
+persistentId
+familyId
+broodId
+generation
+genes
+traits
+skills
+focus
+controller
+isOnline
+```
+
+`id` ainda existe para manter compatibilidade com partes do código atual que usam o socket como chave. `persistentId` é a identidade conceitual que deve prevalecer na evolução do sistema.
+
+## Controle HUMAN ↔ AI
+
+### HUMAN
+
+Quando o jogador está conectado:
+
+- `controller = HUMAN`;
+- `isOnline = true`;
+- `socketId = socket.id`;
+- input humano é aceito;
+- `UtilityAI` não toma decisões de movimento;
+- `NavigationSystem` não altera direção/boost.
+
+### AI
+
+Quando o jogador desconecta:
+
+- `controller = AI`;
+- `isOnline = false`;
+- `socketId = null`;
+- Utility AI assume decisões;
+- estratégia configurada continua sendo usada;
+- a vida permanece no mundo.
+
+### NONE
+
+Quando neutralizada:
+
+- `controller = NONE`;
+- `isOnline = false`;
+- o agente deixa de participar da tomada de decisão;
+- histórico e ranking permanecem.
+
+## Estratégia 1–5
+
+`src/shared/LifeModel.js` introduz o contrato de estratégia discreta:
+
+```text
+food          1..5
+safety        1..5
+exploration   1..5
+combat        1..5
+cooperation   1..5
+growth        1..5
+energy        1..5
+```
+
+Os níveis são convertidos para os pesos 0–100 usados pelos avaliadores existentes. Isso permite mudar a UX sem reescrever imediatamente toda a Utility AI.
+
+A estratégia é preferência, não ordem absoluta:
+
+```text
+Focus + personality + traits + genes + needs + memory + context
+                              ↓
+                         Utility AI
+                              ↓
+                            Goal
+```
+
+## Genética, Traits e Skills
+
+`LifeModel.js` fornece a estrutura inicial de genes e traits.
+
+`SkillTree.js` define duas árvores:
+
+```text
+Individual
+├── Survival
+├── Hunting
+├── Exploration
+└── Social
+
+Family
+├── Lineage
+├── Family Cooperation
+└── Diplomacy
+```
+
+A árvore está separada da monetização e preparada para progressão posterior.
+
+## Família
+
+`familyId` identifica a linhagem. `broodId` identifica uma ninhada/lançamento simultâneo.
+
+`PerceptionSystem` reconhece membros da mesma família em `knownAllies` e não os classifica como presa ou predador.
+
+A intenção é evoluir para cooperação real baseada em:
+
+- parentesco;
+- foco de cooperação;
+- genes;
+- traits;
+- personalidade;
+- memória/reputação.
+
+## Ranking
+
+`StatsSystem` calcula periodicamente:
+
+- `stats.rankingScore`: score individual;
+- `stats.familyRankingScore`: score médio da família.
+
+O score atual é uma primeira aproximação baseada em sobrevivência, kills, comida e tamanho. O algoritmo deverá ser recalibrado antes de ser tratado como ranking competitivo definitivo.
+
+## Persistência
+
+`PersistenceSystem` salva a cada 30 segundos e também é acionado em eventos de desconexão/hibernação.
+
+Além do estado físico, a persistência agora inclui:
+
+- identidade persistente;
+- família/ninhada/geração;
+- genes;
+- traits;
+- skills;
+- foco;
+- controlador/online state;
+- necessidades;
+- estatísticas.
+
+### Observação de migração
+
+Estados antigos podem não possuir os novos campos. O carregamento deve continuar tolerante a ausência de dados, usando defaults. A próxima etapa de persistência deve introduzir uma versão explícita de schema e migração de identidade/família para evitar perda de linhagem em instalações existentes.
+
+## Simulação de Fundo
+
+Quando não há sockets conectados, `WorldManager` entra em background simulation. A região continua executando progressão macro:
+
+- necessidades;
+- alimentação;
+- crescimento;
+- movimentação;
+- conflitos;
+- persistência.
+
+Quando uma conexão volta, a simulação normal é restaurada.
+
+Essa camada é diferente da AI de alta fidelidade. O objetivo é manter vidas persistentes sem gastar o orçamento de CPU de um loop completo quando nenhum jogador está observando.
 
 ## Componentes Principais
 
-### Server (`src/server/`)
-- **server.js**: Ponto de entrada, configuração Express e Socket.IO.
-- **WorldManager.js**: Orquestrador global que pre-cria as regiões do jogo e gerencia a hibernação inteligente e a progressão em background.
-- **Region.js**: Instância isolada do mapa de jogo que executa a simulação física, colisões, IA e persistência.
-- **AgentManager.js**: Gerenciamento de agentes (jogadores e bots) e ciclo de vida de cobras.
-- **FoodManager.js**: Sistema de comidas normais e dinâmicas (alimentadas pela morte de cobras).
-- **PowerupManager.js**: Gerenciamento de power-ups coletáveis na arena (ímãs de comida, etc.).
-- **CollisionSystem.js**: Detecção e resolução de colisões otimizadas via Hash Espacial.
-- **NetworkManager.js**: Roteamento e listeners de pacotes Socket.IO.
-- **AIManager.js**: Inteligência artificial cognitiva e gerador de decisões de bots.
-- **AntiCheat.js**: Detetor autoritativo de teleporte e speed-hacks.
+### Server
 
-### Client (`src/client/`)
-- **game.js**: Ponto de entrada do loop de renderização e interpolação no cliente.
-- **Renderer.js**: Renderização otimizada em múltiplos canvas (grades de câmera, comida, jogadores e minimapa).
-- **GameState.js**: Estado local do jogo com interpolação linear de pacotes.
-- **InputManager.js**: Captura de movimentação, boost e tecla de painel de controle.
-- **SocketClient.js**: Comunicação WebSocket com reconexão automática e cálculo de latência (ping).
-- **UIManager.js**: Atualização otimizada de interface (tabela de classificação, necessidades e debug a 10Hz).
+- **WorldManager.js**: ciclo de vida das regiões e handoff HUMAN/AI.
+- **Region.js**: simulação física, ECS e coordenação regional.
+- **AgentManager.js**: criação e armazenamento das vidas persistentes.
+- **AIManager.js**: scheduler cognitivo.
+- **UtilityAI.js**: seleção de metas.
+- **NavigationSystem.js**: steering autônomo somente para AI.
+- **PerceptionSystem.js**: percepção e reconhecimento de família.
+- **PersistenceSystem.js**: salvamento/restauração.
+- **StatsSystem.js**: métricas e ranking inicial.
 
-### Shared (`src/shared/`)
-- **Constants.js**: Definição de limites de física, velocidade, rotação e constantes de IA compartilhadas.
-- **Utils.js**: Métodos utilitários de distância e bounding boxes.
-- **SpatialHashing.js**: Grade de busca espacial bidimensional para acelerar detecção de colisões.
-- **CircularBuffer.js**: Estrutura eficiente para histórico de movimentos e replicação física.
+### Shared
 
----
+- **LifeModel.js**: identidade, foco, compatibilidade familiar e conversão de estratégia.
+- **SkillTree.js**: definição das árvores de habilidades.
+- **Constants.js**: constantes físicas e de IA.
 
-## Fluxo de Estado e Conexão 24/7
+## Regras Arquiteturais
 
-### 1. Persistência de Dados (JSON / Banco de Dados)
-A cada 30 segundos, o `PersistenceSystem` serializa o estado das cobras ativas (ID, nickname, posição, pontuação, necessidades, sliders de estratégia) e grava em disco através do `JsonPersistenceProvider`. No início do servidor, a região lê o estado salvo para restaurar o ecossistema exatamente de onde parou.
-
-### 2. Reconexão por Nickname (Strategist)
-Quando o jogador insere o nickname no menu de entrada, o servidor busca por uma cobra pré-existente (offline) com o mesmo nome. Se encontrada, ela reconecta o socket do jogador ao corpo da cobra existente, mantendo sua massa, pontuação e histórico de jogo intactos.
-
-### 3. Hibernação Inteligente e Simulação de Fundo (Sleep Mode)
-Para preservar os recursos da nuvem:
-- **Hibernação**: Se o número de conexões ativas for **zero**, o servidor desativa o loop de física de 60Hz e de envio de snapshots de rede.
-- **Progressão Offline (Strategic Simulation)**: A cada 5 segundos de hibernação, o servidor realiza uma macro-atualização de progressão offline na região. Ele simula necessidades biológicas (fome, cansaço), crescimento das cobras por alimentação virtual e combates simplificados por proximidade de forma extremamente leve, mantendo o mundo vivo 24/7 sem consumir CPU da nuvem.
-- **Despertar**: Ao conectar qualquer socket, o loop a 60Hz é restaurado instantaneamente.
-
----
+1. Socket desconectado não significa vida removida.
+2. HUMAN tem prioridade sobre Utility AI e Navigation.
+3. A identidade da vida não deve depender do `socket.id`.
+4. Família é diferente de aliança.
+5. Foco 1–5 é preferência, não comando absoluto.
+6. Genes/traits devem alterar decisões sem substituir a Utility AI.
+7. Premium deve aumentar coleção, não poder individual.
+8. Sistemas interpretam componentes; o agente não deve conter regras de negócio complexas.
+9. Ranking deve ser calculável sem transformar tamanho bruto em único critério.
+10. Simulação de fundo deve ser mais barata que simulação interativa, mas nunca equivaler a pausar o mundo.
 
 ## Execução e Testes
 
-### Executando Localmente
 ```bash
 npm install
 npm run build
 npm start
+npm test
+npm run lint
 ```
 
-### Rodando a Suíte de Testes (Jest)
-```bash
-npm test
-```
-A suíte inclui cobertura de:
-* Unitários (Buffers, Pool de Objetos, Persistência, Utilitários).
-* Integração (Região de simulação física, inicialização dinâmica e simulação de progresso offline).
+A arquitetura mantém a separação entre simulação, rede e apresentação e continua compatível com a evolução para um ecossistema ALife persistente.
