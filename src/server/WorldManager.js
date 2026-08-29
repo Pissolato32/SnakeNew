@@ -34,6 +34,17 @@ class WorldManager {
 
         this.socketToRegionMap.set(socket.id, regionId);
         region.addAgent(socket, strategistData);
+
+        // O Region mantém compatibilidade com o ID de socket legado. Aqui o vínculo
+        // humano é formalizado explicitamente como uma tomada de controle da vida.
+        const agent = Object.values(region.agentManager.getAgents()).find(a => a.id === socket.id);
+        if (agent && !agent.isDead && !agent.isBot) {
+            agent.socketId = socket.id;
+            agent.isOnline = true;
+            agent.isOffline = false;
+            agent.controller = 'HUMAN';
+        }
+
         socket.join(regionId);
     }
 
@@ -43,7 +54,9 @@ class WorldManager {
         const region = this.regions.get(regionId);
         if (!region) return null;
 
-        return Object.values(region.agentManager.getAgents()).find(agent => agent.socketId === socketId) || null;
+        return Object.values(region.agentManager.getAgents()).find(agent =>
+            agent.socketId === socketId || agent.id === socketId
+        ) || null;
     }
 
     handleDisconnect(socket) {
@@ -60,7 +73,6 @@ class WorldManager {
             agent.isOffline = true;
             agent.offlineSince = Date.now();
             this.logger.info(`Strategist '${agent.nickname}' (${agent.persistentId || agent.id}) disconnected. AI assumes control; life remains active.`);
-
             if (region.isReady) region.persistenceSystem.saveState(region.agentManager.getAgents());
         }
 
