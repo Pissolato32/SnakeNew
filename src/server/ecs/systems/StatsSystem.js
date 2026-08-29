@@ -1,6 +1,5 @@
 class StatsSystem {
     constructor() {
-        // Estatísticas Globais do Servidor
         this.worldStats = {
             totalAgentsSpawned: 0,
             totalAgentsKilled: 0,
@@ -10,7 +9,6 @@ class StatsSystem {
             lifetimeSumSec: 0
         };
 
-        // Estatísticas Locais da Região
         this.regionStats = {
             foodDensity: 0,
             effectiveTps: 10,
@@ -18,17 +16,12 @@ class StatsSystem {
             collisionsPerMinute: 0
         };
 
-        // Estatísticas por Espécie (Linhagens genéticas)
         this.speciesStats = new Map();
+        this.familyRankings = new Map();
     }
 
-    /**
-     * Registra o nascimento de um novo agente.
-     */
     recordAgentSpawn(agent) {
         this.worldStats.totalAgentsSpawned++;
-        
-        // Atualiza estatísticas por espécie
         const species = agent.skin || 'default';
         if (!this.speciesStats.has(species)) {
             this.speciesStats.set(species, { spawned: 0, deaths: 0, kills: 0, foodEaten: 0 });
@@ -36,9 +29,6 @@ class StatsSystem {
         this.speciesStats.get(species).spawned++;
     }
 
-    /**
-     * Registra o falecimento/remoção de um agente.
-     */
     recordAgentDeath(agent) {
         this.worldStats.totalAgentsKilled++;
         const lifetimeMs = Date.now() - (agent.stats?.bornAt || Date.now());
@@ -55,29 +45,12 @@ class StatsSystem {
         }
     }
 
-    /**
-     * Registra o spawn de comida no mapa.
-     */
-    recordFoodSpawned(count = 1) {
-        this.worldStats.totalFoodSpawned += count;
-    }
+    recordFoodSpawned(count = 1) { this.worldStats.totalFoodSpawned += count; }
+    recordFoodEaten() { this.worldStats.totalFoodEaten++; }
 
-    /**
-     * Registra o consumo de comida por um agente.
-     */
-    recordFoodEaten() {
-        this.worldStats.totalFoodEaten++;
-    }
-
-    /**
-     * Atualiza as métricas regionais dinamicamente.
-     * @param {Object} region - A região da simulação.
-     */
     updateRegionStats(region) {
         const agents = Object.values(region.agentManager.getAgents());
         const foodCount = region.foodManager.getFood().length;
-        
-        // Densidade de comida por 1,000,000 pixels quadrados
         const WORLD_SIZE = 30000;
         const area = Math.PI * Math.pow(WORLD_SIZE / 2, 2);
         this.regionStats.foodDensity = foodCount / (area / 1_000_000);
@@ -91,10 +64,46 @@ class StatsSystem {
             }
         }
         this.regionStats.averageLatencyMs = humanCount > 0 ? latencySum / humanCount : 0;
-        this.regionStats.effectiveTps = region.scheduler?.tasks.find(t => t.name === 'Physics')?.avgDurationMs ? 
-            Math.round(1000 / Math.max(10, region.scheduler.tasks.find(t => t.name === 'Physics').avgDurationMs)) : 10;
+        const physicsTask = region.scheduler?.tasks.find(t => t.name === 'Physics');
+        this.regionStats.effectiveTps = physicsTask?.avgDurationMs
+            ? Math.round(1000 / Math.max(10, physicsTask.avgDurationMs))
+            : 10;
+
+        this.updateRankings(agents);
+    }
+
+    updateRankings(agents) {
+        const families = new Map();
+
+        for (const agent of agents) {
+            if (agent.isDead) continue;
+            const lifetimeMinutes = Math.max(0, (Date.now() - (agent.stats?.bornAt || Date.now())) / 60000);
+            const wormScore = Math.round(
+                lifetimeMinutes * 2 +
+                (agent.stats?.kills || 0) * 100 +
+                (agent.stats?.foodEaten || 0) * 2 +
+                (agent.maxLength || 0) * 5
+            );
+
+            agent.stats = agent.stats || {};
+            agent.stats.rankingScore = wormScore;
+
+            const familyId = agent.familyId || `legacy:${agent.id}`;
+            if (!families.has(familyId)) families.set(familyId, []);
+            families.get(familyId).push(wormScore);
+        }
+
+        this.familyRankings.clear();
+        for (const [familyId, scores] of families.entries()) {
+            const score = Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length);
+            this.familyRankings.set(familyId, score);
+        }
+
+        for (const agent of agents) {
+            const familyId = agent.familyId || `legacy:${agent.id}`;
+            if (agent.stats) agent.stats.familyRankingScore = this.familyRankings.get(familyId) || 0;
+        }
     }
 }
 
-// Exporta um singleton global por padrão para o WorldManager / Region
 export default StatsSystem;
