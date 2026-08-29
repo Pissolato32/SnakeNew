@@ -1,0 +1,1 @@
+The life-selection stage is complete for review. The implementation is intentionally transitional: token remains the legacy credential until persistent Account authentication is implemented.
