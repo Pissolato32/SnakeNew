@@ -3,7 +3,6 @@ import { getSafeSpawnPoint } from '../shared/Utils.js';
 import SpatialHashing from '../shared/SpatialHashing.js';
 import CircularBuffer from '../shared/CircularBuffer.js';
 import config from '../../config/index.js';
-import Validator from './Validator.js';
 import { applyFocus, createDefaultFocus, createLifeIdentity } from '../shared/LifeModel.js';
 
 class AgentManager {
@@ -29,9 +28,7 @@ class AgentManager {
         }
 
         let agentColor = color;
-        if (!agentColor) {
-            agentColor = DEFAULT_PLAYER_COLORS[Math.floor(Math.random() * DEFAULT_PLAYER_COLORS.length)];
-        }
+        if (!agentColor) agentColor = DEFAULT_PLAYER_COLORS[Math.floor(Math.random() * DEFAULT_PLAYER_COLORS.length)];
 
         const r = parseInt(agentColor.slice(1, 3), 16) || 0;
         const g = parseInt(agentColor.slice(3, 5), 16) || 0;
@@ -101,15 +98,7 @@ class AgentManager {
                 worldModel: { opportunities: [], threats: [], allies: [] },
                 decisionTrace: null
             },
-            needs: {
-                hunger: 0,
-                energy: 100,
-                stress: 0,
-                fear: 0,
-                fatigue: 0,
-                curiosity: 50,
-                confidence: 50
-            },
+            needs: { hunger: 0, energy: 100, stress: 0, fear: 0, fatigue: 0, curiosity: 50, confidence: 50 },
             stats: {
                 bornAt: life.bornAt,
                 kills: 0,
@@ -124,23 +113,14 @@ class AgentManager {
             },
             handleStrategyInput: (data) => {
                 if (!data || data.type !== 'STRATEGY_UPDATE') return;
-
-                // Novo contrato: foco discreto 1-5. O modelo legado 0-100 é derivado
-                // para manter os avaliadores existentes compatíveis.
-                if (data.focus) {
-                    applyFocus(newAgent, data.focus);
-                }
-
-                // Compatibilidade temporária com clientes antigos.
-                if (data.strategy) {
-                    newAgent.strategy = { ...newAgent.strategy, ...data.strategy };
-                }
+                if (data.focus) applyFocus(newAgent, data.focus);
+                if (data.strategy) newAgent.strategy = { ...newAgent.strategy, ...data.strategy };
             }
         };
 
-        this.addAgent(newAgent);
         newAgent.body.addFirst(startPos);
         newAgent.targetAngle = newAgent.angle;
+        this.addAgent(newAgent);
         return newAgent;
     }
 
@@ -154,10 +134,8 @@ class AgentManager {
     removeAgent(agentId) {
         const agent = this.agents[agentId];
         if (!agent) return;
-
         this.agentSpatialHashing.remove(agent);
         for (const segment of agent.bodySegments) this.agentSpatialHashing.remove(segment);
-
         delete this.agents[agent.id];
         this.logger.info(`Agent ${agent.nickname} (${agent.persistentId || agentId}) removed from Region ${this.RegionId}.`);
     }
@@ -171,16 +149,9 @@ class AgentManager {
             for (let i = 0; i < agent.body.length; i += DEATH_FOOD_DROP_STEP) {
                 const segment = agent.body.get(i);
                 if (!segment) continue;
-
                 const offsetX = (Math.random() - 0.5) * DEATH_FOOD_DROP_OFFSET;
                 const offsetY = (Math.random() - 0.5) * DEATH_FOOD_DROP_OFFSET;
-                const foodItem = this.foodManager.createFood(
-                    segment.x + offsetX,
-                    segment.y + offsetY,
-                    DEATH_FOOD_TYPE_INDEX,
-                    this.agents,
-                    SPAWN_BUFFER
-                );
+                const foodItem = this.foodManager.createFood(segment.x + offsetX, segment.y + offsetY, DEATH_FOOD_TYPE_INDEX, this.agents, SPAWN_BUFFER);
                 foodItem.glow = true;
                 foodItem.color = DEATH_FOOD_COLOR;
                 foodItem.rgb = DEATH_FOOD_RGB;
@@ -194,7 +165,6 @@ class AgentManager {
         let baseName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
         let botName = baseName;
         let counter = 1;
-
         if (activeNames) {
             while (activeNames.has(botName)) {
                 botName = `${baseName} ${counter}`;
