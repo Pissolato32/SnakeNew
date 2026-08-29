@@ -4,6 +4,7 @@ import SpatialHashing from '../shared/SpatialHashing.js';
 import CircularBuffer from '../shared/CircularBuffer.js';
 import config from '../../config/index.js';
 import Validator from './Validator.js';
+import { applyFocus, createDefaultFocus, createLifeIdentity } from '../shared/LifeModel.js';
 
 class AgentManager {
     constructor(io, foodManager, logger, RegionId, eventBus = null) {
@@ -22,10 +23,7 @@ class AgentManager {
             const WORLD_SIZE = 30000;
             const angle = Math.random() * 2 * Math.PI;
             const r = Math.random() * (WORLD_SIZE / 4);
-            startPos = { 
-                x: Math.cos(angle) * r, 
-                y: Math.sin(angle) * r 
-            };
+            startPos = { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
         } else {
             startPos = getSafeSpawnPoint(this.agents, SPAWN_BUFFER);
         }
@@ -38,10 +36,12 @@ class AgentManager {
         const r = parseInt(agentColor.slice(1, 3), 16) || 0;
         const g = parseInt(agentColor.slice(3, 5), 16) || 0;
         const b = parseInt(agentColor.slice(5, 7), 16) || 0;
+        const life = createLifeIdentity({ isBot });
 
         const newAgent = {
-            id: id,
-            nickname: nickname,
+            id,
+            persistentId: life.persistentId,
+            nickname,
             x: startPos.x,
             y: startPos.y,
             color: agentColor,
@@ -55,21 +55,32 @@ class AgentManager {
             targetAngle: 0,
             turnRate: INITIAL_Creature_TURN_RATE,
             speed: INITIAL_Creature_SPEED,
-            isBot: isBot,
+            isBot,
+            isOnline: !isBot,
+            controller: life.controller,
+            socketId: isBot ? null : id,
             isBoosting: false,
             aiState: 'FARMING',
             powerups: {},
             ping: 0,
             lastFoodDropTime: 0,
             boostDropCounter: 0,
-            skin: skin,
+            skin,
             lastProcessedInputSeq: 0,
-            // Base component for ALife
+            familyId: life.familyId,
+            broodId: life.broodId,
+            generation: life.generation,
+            genes: life.genes,
+            traits: life.traits,
+            skills: life.skills,
+            focus: createDefaultFocus(),
             strategy: {
                 aggression: 50,
                 caution: 50,
                 curiosity: 50,
-                greed: 50
+                greed: 50,
+                cooperation: 50,
+                energyConservation: 50
             },
             blackboard: {
                 currentGoal: 'EXPLORE',
@@ -79,13 +90,15 @@ class AgentManager {
                 emotionalState: 'CALM',
                 lastKnownFood: [],
                 knownThreats: [],
+                knownPrey: [],
+                knownAllies: [],
                 dangerMap: [],
                 visitedRegions: [],
                 safeZones: [],
                 lastDangerArea: null,
                 currentPath: null,
                 visitedCells: new Map(),
-                worldModel: { opportunities: [], threats: [] },
+                worldModel: { opportunities: [], threats: [], allies: [] },
                 decisionTrace: null
             },
             needs: {
@@ -98,35 +111,44 @@ class AgentManager {
                 confidence: 50
             },
             stats: {
-                bornAt: Date.now(),
+                bornAt: life.bornAt,
                 kills: 0,
                 foodEaten: 0,
                 maxHungerReached: 0,
                 maxStressReached: 0,
                 maxFearReached: 0,
                 maxFatigueReached: 0,
-                deathReason: 'collision'
+                deathReason: 'collision',
+                rankingScore: 0,
+                familyRankingScore: 0
             },
             handleStrategyInput: (data) => {
-                if (data && data.type === "STRATEGY_UPDATE") {
+                if (!data || data.type !== 'STRATEGY_UPDATE') return;
+
+                // Novo contrato: foco discreto 1-5. O modelo legado 0-100 é derivado
+                // para manter os avaliadores existentes compatíveis.
+                if (data.focus) {
+                    applyFocus(newAgent, data.focus);
+                }
+
+                // Compatibilidade temporária com clientes antigos.
+                if (data.strategy) {
                     newAgent.strategy = { ...newAgent.strategy, ...data.strategy };
                 }
             }
         };
-        newAgent.body.addFirst(startPos);
-        newAgent.targetAngle = newAgent.angle;
 
         this.addAgent(newAgent);
+        newAgent.body.addFirst(startPos);
+        newAgent.targetAngle = newAgent.angle;
         return newAgent;
     }
 
     addAgent(agent) {
         this.agents[agent.id] = agent;
         this.agentSpatialHashing.insert(agent);
-        this.logger.info(`Agent ${agent.nickname} (${agent.id}) added to Region ${this.RegionId}.`);
-        if (this.eventBus) {
-            this.eventBus.publish('AGENT_BORN', agent);
-        }
+        this.logger.info(`Agent ${agent.nickname} (${agent.persistentId || agent.id}) added to Region ${this.RegionId}.`);
+        if (this.eventBus) this.eventBus.publish('AGENT_BORN', agent);
     }
 
     removeAgent(agentId) {
@@ -134,19 +156,17 @@ class AgentManager {
         if (!agent) return;
 
         this.agentSpatialHashing.remove(agent);
-        // Also remove body segments from spatial hash
-        for (const segment of agent.bodySegments) {
-            this.agentSpatialHashing.remove(segment);
-        }
+        for (const segment of agent.bodySegments) this.agentSpatialHashing.remove(segment);
 
         delete this.agents[agent.id];
-        this.logger.info(`Agent ${agent.nickname} (${agentId}) removed from Region ${this.RegionId}.`);
+        this.logger.info(`Agent ${agent.nickname} (${agent.persistentId || agentId}) removed from Region ${this.RegionId}.`);
     }
 
     killAgent(agent) {
         agent.isDead = true;
+        agent.controller = 'NONE';
+        agent.isOnline = false;
 
-        // Game logic for dropping food on death
         if (agent.body.length > 0) {
             for (let i = 0; i < agent.body.length; i += DEATH_FOOD_DROP_STEP) {
                 const segment = agent.body.get(i);
@@ -154,7 +174,6 @@ class AgentManager {
 
                 const offsetX = (Math.random() - 0.5) * DEATH_FOOD_DROP_OFFSET;
                 const offsetY = (Math.random() - 0.5) * DEATH_FOOD_DROP_OFFSET;
-
                 const foodItem = this.foodManager.createFood(
                     segment.x + offsetX,
                     segment.y + offsetY,
@@ -168,9 +187,6 @@ class AgentManager {
                 this.foodManager.addFood(foodItem);
             }
         }
-
-        // The 'death' event will be emitted by the Region, which has the socket reference
-        // this.removeAgent(agent.id); // The agent object is kept as 'dead' until cleanup
     }
 
     addBot(activeNames = null) {
@@ -198,9 +214,7 @@ class AgentManager {
     initBots() {
         const botCount = config.BOT_COUNT || 0;
         const activeNames = new Set(Object.values(this.agents).map(p => p.nickname));
-        for (let i = 0; i < botCount; i++) {
-            this.addBot(activeNames);
-        }
+        for (let i = 0; i < botCount; i++) this.addBot(activeNames);
     }
 
     getAgents() {
