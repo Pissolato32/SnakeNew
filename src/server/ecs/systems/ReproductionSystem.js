@@ -1,4 +1,5 @@
 import { createWormIdentity } from '../../../shared/FamilyModel.js';
+import { getAgentModifiers } from '../../../shared/SkillEffects.js';
 
 const TRAITS = ['cooperative', 'patient', 'attentive', 'coward', 'greedy', 'impulsive', 'territorial', 'aggressive'];
 const GENES = ['metabolism_efficient', 'metabolism_fast', 'danger_sense', 'resilient', 'swift', 'heavy'];
@@ -7,7 +8,13 @@ const choose = (items, fallback) => items.length ? items[Math.floor(Math.random(
 
 class ReproductionSystem {
     canReproduce(parent) {
-        return Boolean(parent && !parent.isDead && parent.maxLength >= 40 && (parent.needs?.energy ?? 0) >= 70 && (parent.needs?.hunger ?? 100) <= 40);
+        if (!parent || parent.isDead) return false;
+        const mod = getAgentModifiers(parent);
+        const reproMod = Math.max(0, Math.min(0.3, mod.reproduction || 0));
+        const minLength = Math.max(35, 40 - Math.round(reproMod * 15));
+        const minEnergy = Math.max(60, 70 - Math.round(reproMod * 20));
+        const maxHunger = Math.min(50, 40 + Math.round(reproMod * 20));
+        return Boolean(parent.maxLength >= minLength && (parent.needs?.energy ?? 0) >= minEnergy && (parent.needs?.hunger ?? 100) <= maxHunger);
     }
 
     inherit(parentA, parentB, mutationRate = 0.05) {

@@ -1,12 +1,15 @@
 import config from '../../../../config/index.js';
 import { sameFamily } from '../../../shared/LifeModel.js';
+import { getAgentModifiers } from '../../../shared/SkillEffects.js';
 
 class PerceptionSystem {
     update(agent, context) {
         const { agentManager, foodManager } = context;
         const bb = agent.blackboard;
-        const DIMENSION = config.game ? config.game.AI_VISION_RANGE_DIMENSION : 1500;
-        const WIDTH = config.game ? config.game.AI_VISION_RANGE_WIDTH : 3000;
+        const modifiers = getAgentModifiers(agent);
+        const senseMult = Math.max(0.8, Math.min(1.5, 1 + (modifiers.sense || 0)));
+        const DIMENSION = (config.game ? config.game.AI_VISION_RANGE_DIMENSION : 1500) * senseMult;
+        const WIDTH = DIMENSION * 2;
         const visionRect = { x: agent.x - DIMENSION, y: agent.y - DIMENSION, width: WIDTH, height: WIDTH };
 
         const nearbyFood = foodManager.foodSpatialHashing.query(visionRect);

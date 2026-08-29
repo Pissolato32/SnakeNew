@@ -17,6 +17,7 @@ import PredictionSystem from './ecs/systems/PredictionSystem.js';
 import WorldModelSystem from './ecs/systems/WorldModelSystem.js';
 import NavigationSystem from './ecs/systems/NavigationSystem.js';
 import ReproductionSystem from './ecs/systems/ReproductionSystem.js';
+import { getAgentModifiers } from '../shared/SkillEffects.js';
 import {
     DYNAMIC_FOOD_TARGET_BASE, DYNAMIC_FOOD_TARGET_PER_PLAYER, SPAWN_BUFFER,
     BOOST_MIN_BODY_LENGTH_FOR_FOOD_DROP, BOOST_SPEED_MULTIPLIER, BOOST_FOOD_DROP_INTERVAL,
@@ -251,20 +252,27 @@ class Region {
     runReproductionTick() {
         const agents = Object.values(this.agentManager.getAgents());
         const now = Date.now();
+        const getCooldown = (agent) => {
+            const mod = getAgentModifiers(agent);
+            const bonus = Math.max(0, Math.min(0.3, mod.reproduction || 0));
+            return this.reproductionCooldownMs * (1 - bonus);
+        };
+
         const candidates = agents.filter((agent) =>
             !agent.isDead &&
             agent.controller === 'AI' &&
             this.reproductionSystem.canReproduce(agent) &&
-            now - (agent.blackboard.lastReproductionAt || 0) >= this.reproductionCooldownMs
+            now - (agent.blackboard.lastReproductionAt || 0) >= getCooldown(agent)
         );
 
         for (const parentA of candidates) {
-            if (parentA.isDead || now - (parentA.blackboard.lastReproductionAt || 0) < this.reproductionCooldownMs) continue;
+            const cooldownA = getCooldown(parentA);
+            if (parentA.isDead || now - (parentA.blackboard.lastReproductionAt || 0) < cooldownA) continue;
             const partner = candidates.find((parentB) =>
                 parentB !== parentA &&
                 parentB.familyId === parentA.familyId &&
                 Math.hypot(parentA.x - parentB.x, parentA.y - parentB.y) <= 800 &&
-                now - (parentB.blackboard.lastReproductionAt || 0) >= this.reproductionCooldownMs
+                now - (parentB.blackboard.lastReproductionAt || 0) >= getCooldown(parentB)
             );
             if (!partner) continue;
 
@@ -320,7 +328,9 @@ class Region {
             targetSpeed = agent.baseSpeed * BOOST_SPEED_MULTIPLIER;
             agent.boostDropCounter++;
             if (agent.boostDropCounter >= BOOST_FOOD_DROP_INTERVAL) {
-                agent.maxLength -= BOOST_LENGTH_CONSUMED_PER_DROP;
+                const defMod = Math.max(-0.2, Math.min(0.25, getAgentModifiers(agent).defense || 0));
+                const lengthLoss = Math.max(0.5, BOOST_LENGTH_CONSUMED_PER_DROP * (1 - defMod * 0.5));
+                agent.maxLength -= lengthLoss;
                 agent.boostDropCounter = 0;
                 const dropDistance = agent.radius + DEATH_FOOD_DROP_OFFSET;
                 const dropX = agent.x - Math.cos(agent.angle) * dropDistance;
@@ -341,7 +351,8 @@ class Region {
         const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
         agent.turnRate = Math.max(TURN_RATE_MIN, TURN_RATE_MAX_INITIAL - agent.maxLength / LENGTH_DIVISOR_TURN_RATE);
         agent.angle += normalizedDiff * Math.min(agent.turnRate * 2, Math.abs(normalizedDiff));
-        agent.baseSpeed = Math.max(BASE_SPEED_MIN, BASE_SPEED_MAX_INITIAL - agent.maxLength / LENGTH_DIVISOR_SPEED);
+        const speedMod = Math.max(-0.2, Math.min(0.25, getAgentModifiers(agent).speed || 0));
+        agent.baseSpeed = Math.max(BASE_SPEED_MIN, (BASE_SPEED_MAX_INITIAL - agent.maxLength / LENGTH_DIVISOR_SPEED) * (1 + speedMod));
         agent.speed = targetSpeed;
         const deltaX = Math.cos(agent.angle) * agent.speed;
         const deltaY = Math.sin(agent.angle) * agent.speed;
