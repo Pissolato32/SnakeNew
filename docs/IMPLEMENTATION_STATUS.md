@@ -25,12 +25,13 @@ Data: 2026-08-29
 | Ranking familiar | Base implementada | `familyRankingScore` |
 | Persistência | Schema atualizado | SQLite v2 com identidade, família, genes, traits, skills e foco |
 | CI | Workflow criado | `.github/workflows/ci.yml` executa install/test/lint/build |
-| Testes | Novos contratos unitários | Account, Family, Genetics, Relationship, Reproduction, Alliance e Skills |
+| Testes | Novos contratos unitários | Account, Family, Genetics, Relationship, Reproduction, Alliance, Skills e LifeSelection |
+| Seleção de vida | Protocolo inicial implementado | `persistentId` + credencial no `join-game`, `life-list` e reassunção HUMAN |
 
 ## Ainda requer integração operacional
 
 1. `AccountModel` ainda precisa ser ligado à autenticação/credencial real;
-2. seleção de uma entre várias vidas da mesma conta ainda precisa entrar no protocolo `join-game`;
+2. o catálogo de vidas ainda usa a credencial legada e precisa ser substituído pela conta persistente;
 3. criação automática de múltiplas vidas/broods ainda não está ligada ao `AgentManager`;
 4. reprodução ainda é um sistema de domínio; o disparo por condições do mundo precisa ser conectado ao ciclo ECS;
 5. skills precisam gerar efeitos concretos em sistemas específicos além do registro de progressão;
