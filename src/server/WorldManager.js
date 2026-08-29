@@ -35,8 +35,6 @@ class WorldManager {
         this.socketToRegionMap.set(socket.id, regionId);
         region.addAgent(socket, strategistData);
 
-        // O Region mantém compatibilidade com o ID de socket legado. Aqui o vínculo
-        // humano é formalizado explicitamente como uma tomada de controle da vida.
         const agent = Object.values(region.agentManager.getAgents()).find(a => a.id === socket.id);
         if (agent && !agent.isDead && !agent.isBot) {
             agent.socketId = socket.id;
@@ -44,7 +42,6 @@ class WorldManager {
             agent.isOffline = false;
             agent.controller = 'HUMAN';
         }
-
         socket.join(regionId);
     }
 
@@ -53,10 +50,7 @@ class WorldManager {
         if (!regionId) return null;
         const region = this.regions.get(regionId);
         if (!region) return null;
-
-        return Object.values(region.agentManager.getAgents()).find(agent =>
-            agent.socketId === socketId || agent.id === socketId
-        ) || null;
+        return Object.values(region.agentManager.getAgents()).find(agent => agent.socketId === socketId || agent.id === socketId) || null;
     }
 
     handleDisconnect(socket) {
@@ -75,15 +69,31 @@ class WorldManager {
             this.logger.info(`Strategist '${agent.nickname}' (${agent.persistentId || agent.id}) disconnected. AI assumes control; life remains active.`);
             if (region.isReady) region.persistenceSystem.saveState(region.agentManager.getAgents());
         }
-
         this.socketToRegionMap.delete(socket.id);
     }
 
     handleInput(socket, data) {
         const agent = this.findAgentBySocketId(socket.id);
-        if (agent && agent.controller === 'HUMAN' && typeof agent.handleStrategyInput === 'function') {
-            agent.handleStrategyInput(data);
+        if (!agent || agent.controller !== 'HUMAN' || agent.isDead) return;
+
+        // O input humano tem prioridade sobre a IA. A validação já ocorreu no NetworkManager.
+        if (Number.isFinite(data.angle)) agent.targetAngle = data.angle;
+        if (typeof data.isBoosting === 'boolean') agent.isBoosting = data.isBoosting;
+        if (Number.isInteger(data.seq) && data.seq > agent.lastProcessedInputSeq) {
+            agent.lastProcessedInputSeq = data.seq;
         }
+    }
+
+    handleStrategyUpdate(socket, data) {
+        const agent = this.findAgentBySocketId(socket.id);
+        if (!agent || agent.controller !== 'HUMAN' || agent.isDead) return;
+        agent.handleStrategyInput({ type: 'STRATEGY_UPDATE', focus: data.focus, strategy: data.strategy });
+        agent.strategyUpdatedAt = Date.now();
+        if (agent.isOffline) {
+            agent.isOffline = false;
+            agent.offlineSince = null;
+        }
+        this.logger.debug?.(`Strategy updated for ${agent.nickname} (${agent.persistentId || agent.id}).`);
     }
 
     tick() {
@@ -94,18 +104,14 @@ class WorldManager {
             if (!this.isSleeping) {
                 this.isSleeping = true;
                 this.logger.info('No active connections. Switching world to background simulation...');
-                for (const region of this.regions.values()) {
-                    if (region.isReady) region.persistenceSystem.saveState(region.agentManager.getAgents());
-                }
+                for (const region of this.regions.values()) if (region.isReady) region.persistenceSystem.saveState(region.agentManager.getAgents());
             }
 
             const now = Date.now();
             if (!this.lastBackgroundTick || now - this.lastBackgroundTick >= 5000) {
                 const dt = Math.max(0, (now - this.lastBackgroundTick) / 1000);
                 this.lastBackgroundTick = now;
-                for (const region of this.regions.values()) {
-                    if (region.isReady) region.simulateOfflineProgression(dt);
-                }
+                for (const region of this.regions.values()) if (region.isReady) region.simulateOfflineProgression(dt);
             }
             return;
         }
@@ -121,9 +127,7 @@ class WorldManager {
 
     sendSnapshots() {
         if (this.isSleeping || this.io.sockets.sockets.size === 0) return;
-        for (const region of this.regions.values()) {
-            if (region.isReady) region.sendSnapshots();
-        }
+        for (const region of this.regions.values()) if (region.isReady) region.sendSnapshots();
     }
 }
 
