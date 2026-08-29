@@ -32,16 +32,17 @@ export const DEFAULT_GENES = Object.freeze(['metabolism_efficient']);
 export const DEFAULT_TRAITS = Object.freeze(['adaptable']);
 export const DEFAULT_SKILLS = Object.freeze({ individual: { points: 0, unlocked: [] }, family: { points: 0, unlocked: [] } });
 
-export function createLifeIdentity({ isBot = false } = {}) {
+export function createLifeIdentity({ isBot = false, familyId = null, broodId = null, generation = 1 } = {}) {
     const now = Date.now();
     const persistentId = `worm_${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     return {
         persistentId,
-        familyId: `family_${persistentId}`,
-        broodId: `brood_${persistentId}`,
-        generation: 1,
+        familyId: familyId || `family_${persistentId}`,
+        broodId: broodId || `brood_${persistentId}`,
+        generation,
         controller: isBot ? 'AI' : 'HUMAN',
         isOnline: !isBot,
+        isOffline: false,
         bornAt: now,
         genes: [...DEFAULT_GENES],
         traits: [...DEFAULT_TRAITS],
