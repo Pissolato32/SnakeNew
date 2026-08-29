@@ -1,7 +1,8 @@
 class LifeSelectionService {
     static listLives(agents, { token } = {}) {
+        if (!token) return [];
         return Object.values(agents)
-            .filter((agent) => !agent.isBot && !agent.isDead && (!token || agent.token === token))
+            .filter((agent) => !agent.isBot && !agent.isDead && agent.token === token)
             .map((agent) => ({
                 persistentId: agent.persistentId,
                 nickname: agent.nickname,
@@ -10,13 +11,12 @@ class LifeSelectionService {
                 generation: agent.generation,
                 controller: agent.controller,
                 isOnline: Boolean(agent.isOnline),
-                isOffline: Boolean(agent.isOffline),
-                selected: false
+                isOffline: Boolean(agent.isOffline)
             }));
     }
 
     static findOwnedLife(agents, persistentId, token) {
-        if (!persistentId) return null;
+        if (!persistentId || !token) return null;
         return Object.values(agents).find((agent) =>
             !agent.isBot && !agent.isDead && agent.persistentId === persistentId && agent.token === token
         ) || null;
