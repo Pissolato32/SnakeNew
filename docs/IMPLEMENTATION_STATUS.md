@@ -10,75 +10,65 @@ Data: 2026-08-29
 | HUMAN → AI | Implementado | disconnect muda `controller` para `AI` |
 | AI → HUMAN | Implementado | reconnect reassume a entidade persistida |
 | Movimento humano | Implementado | input autorizado atualiza `targetAngle`/`isBoosting` |
-| Foco 1–5 | Implementado | `LifeModel` + canal `strategy-update` validado |
-| Utility AI + foco | Implementado | food/combat/safety/exploration ponderados pelo foco |
-| Família | Estrutura implementada | `familyId`, `broodId`, `generation` |
-| Genes/traits | Estrutura implementada | defaults + persistência |
-| Skills | Estrutura implementada | árvores individual/familiar |
+| Foco 1–5 | Implementado | `LifeModel` + `strategy-update` validado |
+| Utility AI + foco | Implementado | avaliadores usam pesos legados derivados do foco |
+| Família | Base implementada | `familyId`, `broodId`, `generation` + `FamilyModel` |
+| Genes | Sistema implementado | `GeneticsSystem` com modificadores limitados |
+| Traits | Sistema implementado | `GeneticsSystem` converte traits em predisposições |
+| Relações familiares | Sistema implementado | `RelationshipSystem` calcula cooperação contextual |
 | Parentesco | Implementado | percepção classifica familiares como `knownAllies` |
-| Identidade no snapshot | Implementado | `persistentId`, `familyId`, `controller`, `online` |
+| Skills | Progressão implementada | `SkillProgressionSystem` com pontos, ranks e pré-requisitos |
+| Reprodução | Modelo implementado | `ReproductionSystem` gera identidade, geração, herança e mutação |
+| Alianças | Ciclo de vida implementado | `AllianceSystem` cria, cobra manutenção, expira, ajusta confiança e dissolve |
+| Slots | Regras implementadas | `AccountModel`: Free=3, Premium=10 |
 | Ranking individual | Base implementada | `rankingScore` |
 | Ranking familiar | Base implementada | `familyRankingScore` |
-| Persistência | Atualizada | novos campos salvos/restaurados |
-| Testes do LifeModel | Implementados | cobertura unitária dos contratos básicos |
-| Documentação | Atualizada | README, arquitetura, ALife e status |
+| Persistência | Schema atualizado | SQLite v2 com identidade, família, genes, traits, skills e foco |
+| CI | Workflow criado | `.github/workflows/ci.yml` executa install/test/lint/build |
+| Testes | Novos contratos unitários | Account, Family, Genetics, Relationship, Reproduction, Alliance e Skills |
 
-## Ainda não implementado como mecânica completa
+## Ainda requer integração operacional
 
-1. reprodução e nascimento;
-2. herança genética probabilística;
-3. mutações;
-4. progressão funcional das skill trees;
-5. famílias controladas por uma conta/coleção real;
-6. agrupamento de minhocas lançadas simultaneamente em uma família real;
-7. cooperação contextual entre familiares;
-8. reputação persistente;
-9. alianças entre famílias;
-10. custo e expiração de alianças;
-11. ranking global fora da região;
-12. limite de slots Free/Premium aplicado no backend;
-13. UI final dos sete focos;
-14. schema versionado e migração formal do banco;
-15. testes de integração HUMAN → AI → HUMAN;
-16. smoke test e validação operacional completa.
+1. `AccountModel` ainda precisa ser ligado à autenticação/credencial real;
+2. seleção de uma entre várias vidas da mesma conta ainda precisa entrar no protocolo `join-game`;
+3. criação automática de múltiplas vidas/broods ainda não está ligada ao `AgentManager`;
+4. reprodução ainda é um sistema de domínio; o disparo por condições do mundo precisa ser conectado ao ciclo ECS;
+5. skills precisam gerar efeitos concretos em sistemas específicos além do registro de progressão;
+6. alianças precisam de armazenamento persistente e integração com decisões de percepção/Utility AI;
+7. ranking global precisa de armazenamento fora da região;
+8. UI final dos sete focos e gestão de vidas ainda não está concluída;
+9. replay/caixa-preta e relatório noturno ainda não estão concluídos;
+10. autenticação, autorização e proteção contra abuso precisam ser finalizadas antes do lançamento;
+11. testes de integração HUMAN → AI → HUMAN e restart ainda precisam ser executados;
+12. smoke test, carga, simulações longas e validação operacional ainda precisam ser executados.
 
-## Atenção técnica
+## CI e execução
 
-A alteração foi feita diretamente na branch padrão. A arquitetura agora representa a nova diretriz, mas a integração completa ainda requer execução real do projeto.
+O workflow de GitHub Actions foi criado na branch de desenvolvimento. No momento da revisão, a API do GitHub ainda retorna zero workflow runs associados aos commits desta branch; portanto não há resultado remoto para declarar `test/lint/build` como verdes.
 
-O repositório não apresentou workflow de GitHub Actions associado ao último commit durante a revisão, portanto não há resultado remoto de CI que permita declarar os testes verdes.
-
-Antes de produção, executar:
+Os comandos previstos são:
 
 ```bash
-npm install
-npm test
+npm ci
+npm test -- --runInBand
 npm run lint
 npm run build
-npm start
 ```
 
-E realizar smoke test com:
+## Critério de engenharia
 
-1. criar uma minhoca;
-2. entrar e verificar `controller=HUMAN`;
-3. movimentar e usar boost;
-4. desconectar;
-5. verificar que a mesma vida continua com `controller=AI`;
-6. reconectar usando a mesma credencial/token;
-7. verificar a mesma `persistentId`;
-8. alterar foco 1–5;
-9. verificar mudança de decisão da Utility AI;
-10. neutralizar a minhoca e confirmar que a vida não retorna.
+Nenhuma mecânica deve ser considerada pronta para produção apenas por possuir uma classe ou teste unitário. A promoção para lançamento exige integração com o loop real, persistência, testes automatizados e smoke/load testing.
 
-## Critérios de aceite da próxima etapa
+## Critérios de aceite do produto
 
 - uma minhoca viva nunca é removida apenas porque o socket desconectou;
 - a mesma identidade é reassumida no reconnect;
 - AI nunca sobrescreve input HUMAN;
-- familiares não são tratados como presa/predador;
-- foco 1–5 altera as prioridades sem virar comando absoluto;
-- identidade, família, genes, traits, skills e foco sobrevivem a restart;
+- membros da mesma família não são tratados como presa/predador;
+- foco 1–5 altera prioridades sem virar comando absoluto;
+- genes e traits produzem predisposições limitadas e contextuais;
+- descendentes possuem identidade, família, brood, geração e pais rastreáveis;
+- relações e alianças não concedem invulnerabilidade;
+- Premium aumenta capacidade de coleção, não poder individual;
 - morte é terminal para aquela vida, preservando histórico;
-- Premium não aumenta poder individual;
-- testes automatizados cobrem os contratos fundamentais antes da implementação de reprodução/alianças.
+- CI verde e smoke test real são obrigatórios antes de release.
