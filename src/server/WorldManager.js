@@ -3,6 +3,7 @@ import Logger from '../shared/Logger.js';
 import Region from './Region.js';
 import NetworkManager from './NetworkManager.js';
 import Metrics from './Metrics.js';
+import LifeSelectionService from './LifeSelectionService.js';
 
 class WorldManager {
     constructor(io) {
@@ -33,6 +34,60 @@ class WorldManager {
         if (!region) return;
 
         this.socketToRegionMap.set(socket.id, regionId);
+
+        if (strategistData.listLives) {
+            const lives = LifeSelectionService.listLives(region.agentManager.getAgents(), strategistData);
+            socket.emit('life-list', { lives });
+            return;
+        }
+
+        if (strategistData.persistentId) {
+            const selected = LifeSelectionService.findOwnedLife(
+                region.agentManager.getAgents(),
+                strategistData.persistentId,
+                strategistData.token
+            );
+
+            if (!selected) {
+                socket.emit('login-failed', { error: 'Vida não encontrada ou credencial inválida.' });
+                this.socketToRegionMap.delete(socket.id);
+                return;
+            }
+
+            if (selected.isOnline && selected.socketId) {
+                socket.emit('login-failed', { error: 'Esta vida já está sob controle de outra sessão.' });
+                this.socketToRegionMap.delete(socket.id);
+                return;
+            }
+
+            const oldId = selected.id;
+            delete region.agentManager.agents[oldId];
+            region.agentManager.agentSpatialHashing.update(selected);
+            selected.id = socket.id;
+            selected.socketId = socket.id;
+            selected.isOnline = true;
+            selected.isOffline = false;
+            selected.controller = 'HUMAN';
+            selected.offlineSince = null;
+            region.agentManager.agents[socket.id] = selected;
+
+            socket.join(regionId);
+            socket.emit('game-setup', {
+                worldSize: region.id ? undefined : undefined,
+                token: selected.token,
+                life: {
+                    persistentId: selected.persistentId,
+                    nickname: selected.nickname,
+                    familyId: selected.familyId,
+                    broodId: selected.broodId,
+                    generation: selected.generation
+                },
+                lives: LifeSelectionService.listLives(region.agentManager.getAgents(), strategistData)
+            });
+            this.logger.info(`Strategist reassumed life '${selected.nickname}' (${selected.persistentId}).`);
+            return;
+        }
+
         region.addAgent(socket, strategistData);
 
         const agent = Object.values(region.agentManager.getAgents()).find(a => a.id === socket.id);
@@ -76,7 +131,6 @@ class WorldManager {
         const agent = this.findAgentBySocketId(socket.id);
         if (!agent || agent.controller !== 'HUMAN' || agent.isDead) return;
 
-        // O input humano tem prioridade sobre a IA. A validação já ocorreu no NetworkManager.
         if (Number.isFinite(data.angle)) agent.targetAngle = data.angle;
         if (typeof data.isBoosting === 'boolean') agent.isBoosting = data.isBoosting;
         if (Number.isInteger(data.seq) && data.seq > agent.lastProcessedInputSeq) {
