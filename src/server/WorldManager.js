@@ -4,6 +4,7 @@ import Region from './Region.js';
 import NetworkManager from './NetworkManager.js';
 import Metrics from './Metrics.js';
 import LifeSelectionService from './LifeSelectionService.js';
+import { WORLD_SIZE } from '../shared/Constants.js';
 
 class WorldManager {
     constructor(io) {
@@ -73,7 +74,7 @@ class WorldManager {
 
             socket.join(regionId);
             socket.emit('game-setup', {
-                worldSize: region.id ? undefined : undefined,
+                worldSize: WORLD_SIZE,
                 token: selected.token,
                 life: {
                     persistentId: selected.persistentId,
