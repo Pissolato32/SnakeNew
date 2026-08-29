@@ -3,11 +3,9 @@ import SQLitePersistenceProvider from '../providers/SQLitePersistenceProvider.js
 class PersistenceSystem {
     constructor(logger, provider = null) {
         this.logger = logger;
-        // Injeta o provider, ou usa o SQLite como provedor oficial
         this.provider = provider || new SQLitePersistenceProvider(this.logger);
-
         this.lastSave = Date.now();
-        this.saveInterval = 30000; // Salva a cada 30 segundos
+        this.saveInterval = 30000;
     }
 
     update(agents) {
@@ -18,20 +16,27 @@ class PersistenceSystem {
     }
 
     async saveState(agents) {
-        const state = {
-            timestamp: Date.now(),
-            agents: []
-        };
+        const state = { timestamp: Date.now(), agents: [] };
 
         for (const agentId in agents) {
             const agent = agents[agentId];
             state.agents.push({
                 id: agent.id,
+                persistentId: agent.persistentId,
                 nickname: agent.nickname,
                 isBot: agent.isBot,
                 token: agent.token,
                 isOffline: agent.isOffline || false,
+                isOnline: agent.isOnline || false,
+                controller: agent.controller || (agent.isBot ? 'AI' : 'HUMAN'),
                 offlineSince: agent.offlineSince || null,
+                familyId: agent.familyId,
+                broodId: agent.broodId,
+                generation: agent.generation,
+                genes: agent.genes || [],
+                traits: agent.traits || [],
+                skills: agent.skills || { individual: { points: 0, unlocked: [] }, family: { points: 0, unlocked: [] } },
+                focus: agent.focus || null,
                 x: agent.x,
                 y: agent.y,
                 angle: agent.angle,
@@ -57,8 +62,7 @@ class PersistenceSystem {
 
     async loadState() {
         try {
-            const state = await this.provider.loadState();
-            return state;
+            return await this.provider.loadState();
         } catch (err) {
             this.logger.error('PersistenceSystem failed to load state:', err);
             return null;
